@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fortune-teller"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "faster-whisper>=1.2.1",
+    "openai>=2.41.0",
+    "pyaudio>=0.2.14",
+    "python-dotenv>=1.2.2",
+]
+
+[project.scripts]
+prompt-test = "prompt_test:main"
+test = "prompt_test:main"
+
+[tool.setuptools]
+py-modules = [
+    "app_initializer",
+    "audio_player",
+    "audio_recorder",
+    "fortune_service",
+    "gui",
+    "main",
+    "oracle_client",
+    "prompt_loader",
+    "prompt_test",
+    "settings",
+    "splash",
+    "test",
+    "transcriber",
+]
+
+[tool.uv]
+package = true
