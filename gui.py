@@ -9,6 +9,7 @@ from threading import Thread
 from time import monotonic
 import tkinter as tk
 from tkinter import font as tkfont
+from tkinter import ttk
 import traceback
 import zlib
 
@@ -47,6 +48,8 @@ PHASE_MARKER_POSITIONS = {
     "recommendation": (320, 96),
     "prophecy": (402, 84),
 }
+CHEAT_STAGE_NAMES = ("analysis", "recommendation", "prophecy")
+CHEAT_RANDOM_OPTION = "(random)"
 
 
 class FortuneTellerGUI:
@@ -110,6 +113,30 @@ class FortuneTellerGUI:
         self._gray_veil_image: tk.PhotoImage | None = None
         self._gray_veil_image_key: tuple[int, int, int] | None = None
         self._frame_images: list[tk.PhotoImage] = []
+        self._cheat_mode_enabled = False
+        self._alt_pressed = False
+        self._alt_code_digits = ""
+        self._cheat_stage_options = self.fortune_teller.get_stage_variant_names()
+        self._cheat_stage_vars = {
+            stage_name: tk.StringVar(value=CHEAT_RANDOM_OPTION)
+            for stage_name in CHEAT_STAGE_NAMES
+        }
+        self._cheat_panel = tk.Frame(
+            self.root,
+            bg="#161d26",
+            bd=1,
+            highlightbackground="#c9a45f",
+            highlightthickness=1,
+        )
+        self._cheat_status_label = tk.Label(
+            self._cheat_panel,
+            text="CHEAT MODE",
+            bg="#161d26",
+            fg="#f2d28b",
+            font=("Consolas", 11, "bold"),
+            anchor="w",
+        )
+        self._cheat_combo_boxes: dict[str, ttk.Combobox] = {}
         self._reset_stars()
 
         self.root.title("Gemmarndakel")
@@ -132,6 +159,10 @@ class FortuneTellerGUI:
         self.canvas.bind("<ButtonRelease-1>", self.stop_recording)
         self.canvas.bind("<Motion>", self._handle_pointer_motion)
         self.canvas.bind("<Leave>", self._handle_pointer_leave)
+        self.root.bind("<KeyPress>", self._handle_key_press, add="+")
+        self.root.bind("<KeyRelease>", self._handle_key_release, add="+")
+
+        self._build_cheat_panel()
 
         self._animate()
 
@@ -145,6 +176,10 @@ class FortuneTellerGUI:
 
         if self.mode != "candle":
             return
+
+        self.fortune_teller.set_stage_variant_overrides(
+            self._current_stage_variant_overrides()
+        )
 
         self._is_recording = True
         self.mode = "recording"
@@ -162,6 +197,7 @@ class FortuneTellerGUI:
         self._reset_card_reveal()
         self._reset_stars()
         self._reset_phase_markers()
+        self._refresh_cheat_panel()
         self.recorder.start()
 
         Thread(target=self._capture_and_process, daemon=True).start()
@@ -204,6 +240,7 @@ class FortuneTellerGUI:
         self._reset_card_reveal()
         self._reset_stars()
         self._reset_phase_markers()
+        self._refresh_cheat_panel()
 
     def close(self) -> None:
         if self._is_destroyed:
@@ -218,6 +255,7 @@ class FortuneTellerGUI:
         self._audio_level = 0.0
         self._audio_visual_level = 0.0
         self.recorder.stop()
+        self._refresh_cheat_panel()
         self.root.protocol("WM_DELETE_WINDOW", lambda: None)
         self.root.after(int(SHUTDOWN_SECONDS * 1000), self._finish_shutdown)
 
@@ -378,6 +416,111 @@ class FortuneTellerGUI:
         except tk.TclError:
             self._is_destroyed = True
 
+    def _build_cheat_panel(self) -> None:
+        self._cheat_status_label.grid(
+            row=0,
+            column=0,
+            columnspan=2,
+            sticky="ew",
+            padx=10,
+            pady=(8, 6),
+        )
+        for row_index, stage_name in enumerate(CHEAT_STAGE_NAMES, start=1):
+            label = tk.Label(
+                self._cheat_panel,
+                text=stage_name.capitalize(),
+                bg="#161d26",
+                fg="#f4e5bd",
+                font=("Segoe UI", 10, "bold"),
+                anchor="w",
+            )
+            label.grid(row=row_index, column=0, sticky="w", padx=(10, 8), pady=4)
+            values = (CHEAT_RANDOM_OPTION, *self._cheat_stage_options.get(stage_name, ()))
+            combo_box = ttk.Combobox(
+                self._cheat_panel,
+                textvariable=self._cheat_stage_vars[stage_name],
+                values=values,
+                state="readonly",
+                width=24,
+            )
+            combo_box.grid(row=row_index, column=1, sticky="ew", padx=(0, 10), pady=4)
+            self._cheat_combo_boxes[stage_name] = combo_box
+
+        self._cheat_panel.grid_columnconfigure(1, weight=1)
+        self._refresh_cheat_panel()
+
+    def _refresh_cheat_panel(self) -> None:
+        is_visible = (
+            self._cheat_mode_enabled
+            and self.mode == "candle"
+            and not self._is_shutting_down
+        )
+        if is_visible:
+            self._cheat_panel.place(x=28, y=28, width=330)
+            self._cheat_panel.lift()
+        else:
+            self._cheat_panel.place_forget()
+
+        combo_state = "readonly" if is_visible else "disabled"
+        for combo_box in self._cheat_combo_boxes.values():
+            combo_box.configure(state=combo_state)
+
+    def _current_stage_variant_overrides(self) -> dict[str, str | None]:
+        overrides: dict[str, str | None] = {}
+        for stage_name, variable in self._cheat_stage_vars.items():
+            selected = variable.get().strip()
+            overrides[stage_name] = None if selected == CHEAT_RANDOM_OPTION else selected
+
+        return overrides
+
+    def _toggle_cheat_mode(self) -> None:
+        if self._is_shutting_down:
+            return
+
+        self._cheat_mode_enabled = not self._cheat_mode_enabled
+        self._refresh_cheat_panel()
+
+    def _handle_key_press(self, event: tk.Event) -> None:
+        if event.char == "\xa0":
+            self._toggle_cheat_mode()
+            self._alt_code_digits = ""
+            return
+
+        if event.keysym in {"Alt_L", "Alt_R"}:
+            self._alt_pressed = True
+            self._alt_code_digits = ""
+            return
+
+        if not self._alt_pressed:
+            return
+
+        digit: str | None = None
+        if (
+            event.keysym.startswith("KP_")
+            and len(event.keysym) == 4
+            and event.keysym[-1].isdigit()
+        ):
+            digit = event.keysym[-1]
+        elif event.keysym.isdigit():
+            digit = event.keysym
+
+        if digit is None:
+            return
+
+        self._alt_code_digits = (self._alt_code_digits + digit)[-4:]
+        if self._alt_code_digits == "0160":
+            self._toggle_cheat_mode()
+            self._alt_code_digits = ""
+
+    def _handle_key_release(self, event: tk.Event) -> None:
+        if event.keysym not in {"Alt_L", "Alt_R"}:
+            return
+
+        if self._alt_code_digits == "0160":
+            self._toggle_cheat_mode()
+        self._alt_pressed = False
+        self._alt_code_digits = ""
+
     def _handle_pointer_motion(self, event: tk.Event) -> None:
         local_x = event.x - self._content_offset_x
         local_y = event.y - self._content_offset_y
@@ -421,6 +564,7 @@ class FortuneTellerGUI:
         self._reset_card_reveal()
         self._reset_stars()
         self._reset_phase_markers()
+        self._refresh_cheat_panel()
 
     def show_prophecy(self, prophecy: str) -> None:
         if self._is_shutting_down:
@@ -442,6 +586,7 @@ class FortuneTellerGUI:
         self._card_reveal_started_at = monotonic()
         self._card_layout_key = None
         self._card_letters = []
+        self._refresh_cheat_panel()
 
     def _animate(self) -> None:
         if self._is_destroyed:

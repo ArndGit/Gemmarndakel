@@ -30,8 +30,27 @@ PHASE_PROGRESS: dict[tuple[str, str], int] = {
     ("prophecy", "selected"): 70,
     ("prophecy", "reasoning"): 76,
     ("prophecy", "answer"): 88,
-    ("prophecy", "done"): 98,
+    ("prophecy", "done"): 92,
+    ("spellcheck", "selected"): 93,
+    ("spellcheck", "reasoning"): 94,
+    ("spellcheck", "answer"): 97,
+    ("spellcheck", "done"): 98,
 }
+SPELLCHECK_SYSTEM_PROMPT = (
+    "Du bist die letzte deutsche Korrekturstufe nach einem Orakeltext. "
+    "Du bekommst ausschliesslich den fertigen Ausgabetext der Orakelstufe. "
+    "Erzeuge fehlerfreies Standarddeutsch. "
+    "Korrigiere konsequent Grammatik, Flexion, Kasus, Genus, Numerus, Verbformen, Satzbau, Bezuege, Zeichensetzung, Gross- und Kleinschreibung sowie offensichtliche Tippfehler. "
+    "Pruefe besonders Subjekt-Verb-Kongruenz, Artikel-Nomen-Kongruenz, Pronomenbezuege, Kommasetzung und holprige Satzanschluesse. "
+    "Wenn der Text erkennbar ein Bibelvers oder ein Bibelzitat mit Stellenangabe ist, behandle ihn nicht wie freie Prosa. "
+    "Pruefe stattdessen, ob Wortlaut und Stellenangabe zusammenpassen, und korrigiere den Vers auf die wahrscheinlich richtige Fassung sowie bei Bedarf auch die Referenz. "
+    "Wenn du die genaue Fassung nicht sicher wiederherstellen kannst, nimm nur minimale orthografische Korrekturen vor und erfinde keinen neuen Vers. "
+    "Wenn ein Satz grammatisch falsch ist, formuliere ihn so weit um, wie es fuer korrektes Deutsch noetig ist, aber aendere nicht Sinn, Ton, Mehrdeutigkeit, Anrede, Stil oder grobe Laenge. "
+    "Bei Bibelversen hat die Wiederherstellung des korrekten Zitats Vorrang vor stilistischen Glaettungen. "
+    "Erfinde nichts hinzu, lasse nichts Wesentliches weg und kommentiere nichts. "
+    "Wenn der Text bereits korrekt ist, gib ihn unveraendert zurueck. "
+    "Gib ausschliesslich den korrigierten deutschen Text aus, ohne Anfuehrungszeichen, Labels oder Kommentar."
+)
 NO_LOADED_LLM_MESSAGE = "Es gibt gerade schlechte Schwingungen..."
 LOADED_MODEL_STATES = {"active", "loaded", "ready", "running", "started"}
 UNLOADED_MODEL_STATES = {
@@ -163,6 +182,7 @@ class OracleClient:
     def __init__(self, settings: AppSettings) -> None:
         self._settings = settings
         self._model_id = settings.llm_model
+        self._stage_variant_overrides: dict[str, str] = {}
         self._client = OpenAI(
             base_url=settings.lm_studio_url,
             api_key=settings.llm_api_key or "lm-studio",
@@ -185,6 +205,37 @@ class OracleClient:
             flush=True,
         )
 
+    def get_stage_variant_names(self) -> dict[str, tuple[str, ...]]:
+        prompt_config = load_prompt_config(self._settings.prompt_config_file)
+        return {
+            "analysis": tuple(variant.name for variant in prompt_config.analysis.variants),
+            "recommendation": tuple(
+                variant.name for variant in prompt_config.recommendation.variants
+            ),
+            "prophecy": tuple(variant.name for variant in prompt_config.prophecy.variants),
+        }
+
+    def set_stage_variant_overrides(
+        self,
+        overrides: dict[str, str | None],
+    ) -> None:
+        prompt_config = load_prompt_config(self._settings.prompt_config_file)
+        stages = {
+            "analysis": prompt_config.analysis,
+            "recommendation": prompt_config.recommendation,
+            "prophecy": prompt_config.prophecy,
+        }
+        normalized: dict[str, str] = {}
+        for stage_name, variant_name in overrides.items():
+            if stage_name not in stages:
+                raise ValueError(f"Unknown stage override: {stage_name}")
+            if variant_name is None:
+                continue
+            self._get_variant_by_name(stages[stage_name], variant_name)
+            normalized[stage_name] = variant_name
+
+        self._stage_variant_overrides = normalized
+
     def _stage_reasoning_enabled(self, stage_name: str) -> bool:
         if stage_name == "analysis":
             return self._settings.llm_analysis_reasoning_enabled
@@ -192,6 +243,8 @@ class OracleClient:
             return self._settings.llm_recommendation_reasoning_enabled
         if stage_name == "prophecy":
             return self._settings.llm_prophecy_reasoning_enabled
+        if stage_name == "spellcheck":
+            return False
 
         raise ValueError(f"Unknown stage name: {stage_name}")
 
@@ -582,9 +635,10 @@ class OracleClient:
         )
         stage_outputs: dict[str, str] = {}
         try:
-            analysis_variant = prompt_selector.choose(
+            analysis_variant = self._choose_stage_variant(
                 "analysis",
                 prompt_config.analysis,
+                prompt_selector,
             )
             self._emit_phase_status(
                 progress,
@@ -602,16 +656,19 @@ class OracleClient:
                 phase_fill_color=analysis_variant.fill_color,
                 phase_outline_color=analysis_variant.outline_color,
                 system_prompt=self._build_stage_prompt(
-                    analysis_variant,
-                    prompt_config.analysis.style,
+                    stage_name="analysis",
+                    stage_variant=analysis_variant,
+                    stage_style=prompt_config.analysis.style,
+                    persona=persona_profile,
                 ),
                 user_content=self._analysis_input(user_text, persona_profile),
                 progress=progress,
                 temperature=0.25,
             )
-            recommendation_variant = prompt_selector.choose(
+            recommendation_variant = self._choose_stage_variant(
                 "recommendation",
                 prompt_config.recommendation,
+                prompt_selector,
             )
             self._emit_phase_status(
                 progress,
@@ -620,7 +677,7 @@ class OracleClient:
                 variant_name=recommendation_variant.name,
                 phase_fill_color=recommendation_variant.fill_color,
                 phase_outline_color=recommendation_variant.outline_color,
-                message="Hermes trägt ein verborgenes Zeichen heran...",
+                message="Hermes trÃ¤gt ein verborgenes Zeichen heran...",
                 star_count=0,
             )
             stage_outputs["recommendation"] = self._run_llm_stage(
@@ -629,8 +686,10 @@ class OracleClient:
                 phase_fill_color=recommendation_variant.fill_color,
                 phase_outline_color=recommendation_variant.outline_color,
                 system_prompt=self._build_stage_prompt(
-                    recommendation_variant,
-                    prompt_config.recommendation.style,
+                    stage_name="recommendation",
+                    stage_variant=recommendation_variant,
+                    stage_style=prompt_config.recommendation.style,
+                    persona=persona_profile,
                 ),
                 user_content=self._recommendation_input(
                     user_text,
@@ -640,9 +699,10 @@ class OracleClient:
                 progress=progress,
                 temperature=0.55,
             )
-            prophecy_variant = prompt_selector.choose(
+            prophecy_variant = self._choose_stage_variant(
                 "prophecy",
                 prompt_config.prophecy,
+                prompt_selector,
             )
             self._emit_phase_status(
                 progress,
@@ -651,19 +711,22 @@ class OracleClient:
                 variant_name=prophecy_variant.name,
                 phase_fill_color=prophecy_variant.fill_color,
                 phase_outline_color=prophecy_variant.outline_color,
-                message="Hekates Fackel fällt auf den letzten Faden...",
+                message="Hekates Fackel fÃ¤llt auf den letzten Faden...",
                 star_count=0,
             )
             prophecy_prompt = self._build_stage_prompt(
-                prophecy_variant,
-                prompt_config.prophecy.style,
+                stage_name="prophecy",
+                stage_variant=prophecy_variant,
+                stage_style=prompt_config.prophecy.style,
+                persona=persona_profile,
             )
             print(
                 "[Prompt] Prophecy style appended: "
                 f"style_chars={len(prompt_config.prophecy.style or '')}",
                 flush=True,
             )
-            stage_outputs["prophecy"] = self._run_llm_stage(
+            stage_outputs["prophecy"] = self._normalize_prophecy_address(
+                self._run_llm_stage(
                 stage_name="prophecy",
                 variant_name=prophecy_variant.name,
                 phase_fill_color=prophecy_variant.fill_color,
@@ -676,11 +739,33 @@ class OracleClient:
                 ),
                 progress=progress,
                 temperature=0.35,
+                ),
+                persona_profile,
             )
+            self._emit_phase_status(
+                progress,
+                stage_name="spellcheck",
+                phase_state="selected",
+                variant_name="spellcheck-de",
+                phase_fill_color=prophecy_variant.fill_color,
+                phase_outline_color=prophecy_variant.outline_color,
+                message="Der Spruch wird im letzten Licht geglaettet...",
+                star_count=0,
+            )
+            stage_outputs["spellcheck"] = self._run_llm_stage(
+                stage_name="spellcheck",
+                variant_name="spellcheck-de",
+                phase_fill_color=prophecy_variant.fill_color,
+                phase_outline_color=prophecy_variant.outline_color,
+                system_prompt=SPELLCHECK_SYSTEM_PROMPT,
+                user_content=self._spellcheck_input(stage_outputs["prophecy"]),
+                progress=progress,
+                temperature=0.0,
+            ).strip()
             if progress is not None:
                 progress("The card is being written.", 98, 0)
 
-            full_prophecy = stage_outputs["prophecy"].strip()
+            full_prophecy = stage_outputs["spellcheck"]
             elapsed = monotonic() - started_at
             print(
                 "[LLM] Agentic prophecy pipeline finished: "
@@ -692,6 +777,39 @@ class OracleClient:
         finally:
             stage_outputs.clear()
             print("[Pipeline] Prophecy run context reset.", flush=True)
+
+    def _choose_stage_variant(
+        self,
+        stage_name: str,
+        stage: PromptStage,
+        prompt_selector: MersenneTwisterPromptSelector,
+    ) -> PromptVariant:
+        override_name = self._stage_variant_overrides.get(stage_name)
+        if override_name is None:
+            return prompt_selector.choose(stage_name, stage)
+
+        selected = self._get_variant_by_name(stage, override_name)
+        print(
+            "[Prompt] FORCED_VARIANT "
+            f"stage={stage_name}, "
+            f"name={selected.name}, "
+            f"weight={selected.weight:g}, "
+            f"fill={selected.fill_color}, "
+            f"outline={selected.outline_color}",
+            flush=True,
+        )
+        return selected
+
+    def _get_variant_by_name(
+        self,
+        stage: PromptStage,
+        variant_name: str,
+    ) -> PromptVariant:
+        for variant in stage.variants:
+            if variant.name == variant_name:
+                return variant
+
+        raise ValueError(f"Unknown prompt variant: {variant_name}")
 
     def create_prophecy_matrix(
         self,
@@ -724,8 +842,10 @@ class OracleClient:
             phase_fill_color=analysis_variant.fill_color,
             phase_outline_color=analysis_variant.outline_color,
             system_prompt=self._build_stage_prompt(
-                analysis_variant,
-                prompt_config.analysis.style,
+                stage_name="analysis",
+                stage_variant=analysis_variant,
+                stage_style=prompt_config.analysis.style,
+                persona=persona_profile,
             ),
             user_content=self._analysis_input(normalized_user_text, persona_profile),
             progress=None,
@@ -751,8 +871,10 @@ class OracleClient:
             phase_fill_color=recommendation_variant.fill_color,
             phase_outline_color=recommendation_variant.outline_color,
             system_prompt=self._build_stage_prompt(
-                recommendation_variant,
-                prompt_config.recommendation.style,
+                stage_name="recommendation",
+                stage_variant=recommendation_variant,
+                stage_style=prompt_config.recommendation.style,
+                persona=persona_profile,
             ),
             user_content=self._recommendation_input(
                 normalized_user_text,
@@ -800,22 +922,40 @@ class OracleClient:
                 phase_fill_color=prophecy_variant.fill_color,
                 phase_outline_color=prophecy_variant.outline_color,
                 system_prompt=self._build_stage_prompt(
-                    prophecy_variant,
-                    prompt_config.prophecy.style,
+                    stage_name="prophecy",
+                    stage_variant=prophecy_variant,
+                    stage_style=prompt_config.prophecy.style,
+                    persona=persona_profile,
                 ),
                 user_content=prophecy_input,
                 progress=None,
                 temperature=0.35,
                 stream_output=stream_output,
             )
+            spellchecked_output = self._run_llm_stage(
+                stage_name="spellcheck",
+                variant_name="spellcheck-de",
+                phase_fill_color=prophecy_variant.fill_color,
+                phase_outline_color=prophecy_variant.outline_color,
+                system_prompt=SPELLCHECK_SYSTEM_PROMPT,
+                user_content=self._spellcheck_input(
+                    self._normalize_prophecy_address(
+                        prophecy_output,
+                        persona_profile,
+                    )
+                ),
+                progress=None,
+                temperature=0.0,
+                stream_output=stream_output,
+            )
             prophecy_results.append(
                 StageRunResult(
-                    stage_name="prophecy",
+                    stage_name="spellcheck",
                     variant_name=prophecy_variant.name,
                     variant_fill_color=prophecy_variant.fill_color,
                     variant_outline_color=prophecy_variant.outline_color,
                     variant_weight=prophecy_variant.weight,
-                    output=prophecy_output,
+                    output=spellchecked_output.strip(),
                 )
             )
 
@@ -1191,25 +1331,90 @@ class OracleClient:
         messages = {
             ("analysis", "reasoning"): "Ich lausche den Echos aus dem Tartaros...",
             ("analysis", "answer"): "Athene ordnet die Splitter im Rauch...",
-            ("analysis", "done"): "Der erste Faden glänzt im Licht der Moiren.",
+            ("analysis", "done"): "Der erste Faden glÃ¤nzt im Licht der Moiren.",
             ("recommendation", "reasoning"): "Hekate hebt die Fackel an die Schwelle...",
-            ("recommendation", "answer"): "Hermes flüstert zwischen Schatten und Schwur...",
+            ("recommendation", "answer"): "Hermes flÃ¼stert zwischen Schatten und Schwur...",
             ("recommendation", "done"): "Der zweite Faden ruht unter dunklem Lorbeer.",
             ("prophecy", "reasoning"): "Apollons Leier klingt hinter dem Nebel...",
             ("prophecy", "answer"): "Die Moiren ziehen den Spruch aus der Nacht...",
             ("prophecy", "done"): "Das Zeichen sinkt auf die Karte.",
+            ("spellcheck", "reasoning"): "Die Schrift wird gegen den Wind gelesen...",
+            ("spellcheck", "answer"): "Der letzte Fehler weicht aus dem Spruch...",
+            ("spellcheck", "done"): "Der Spruch liegt bereinigt vor.",
         }
         return messages.get((stage_name, phase_state), "Die Zeichen wandern weiter...")
 
     def _build_stage_prompt(
         self,
+        *,
+        stage_name: str,
         stage_variant: PromptVariant,
         stage_style: str | None,
+        persona: PersonaProfile,
     ) -> str:
-        if stage_style is None or stage_variant.ignore_style:
-            return stage_variant.prompt
+        variant_prompt = stage_variant.prompt
+        if stage_name == "prophecy":
+            variant_prompt = self._personalize_prophecy_prompt(variant_prompt, persona)
 
-        return f"{stage_variant.prompt}\n\n{stage_style}"
+        if stage_style is None or stage_variant.ignore_style:
+            return variant_prompt
+
+        return f"{variant_prompt}\n\n{stage_style}"
+
+    def _personalize_prophecy_prompt(
+        self,
+        prompt: str,
+        persona: PersonaProfile,
+    ) -> str:
+        positive_opening, warning_opening = self._prophecy_openings(persona)
+        return (
+            prompt.replace("'Suchender, ich sage dir'", f"'{positive_opening}'")
+            .replace("Sei gewarnt, Suchender, denn", warning_opening)
+            .replace("'Sei gewarnt, Suchender, denn'", f"'{warning_opening}'")
+        )
+
+    def _normalize_prophecy_address(
+        self,
+        prophecy: str,
+        persona: PersonaProfile,
+    ) -> str:
+        positive_opening, warning_opening = self._prophecy_openings(persona)
+        normalized = prophecy.strip()
+
+        opening_replacements = {
+            "Suchender, ich sage dir": positive_opening,
+            "Suchende, ich sage dir": positive_opening,
+            "Kind, ich sage dir": positive_opening,
+            "mein Sohn, ich sage dir": positive_opening,
+            "meine Tochter, ich sage dir": positive_opening,
+            "Sei gewarnt, Suchender, denn": warning_opening,
+            "Sei gewarnt, Suchende, denn": warning_opening,
+            "Sei gewarnt, Kind, denn": warning_opening,
+            "Sei gewarnt, mein Sohn, denn": warning_opening,
+            "Sei gewarnt, meine Tochter, denn": warning_opening,
+        }
+        for source, target in opening_replacements.items():
+            if normalized.startswith(source):
+                return f"{target}{normalized[len(source):]}"
+
+        return normalized
+
+    def _prophecy_openings(self, persona: PersonaProfile) -> tuple[str, str]:
+        address = self._prophecy_address(persona)
+        return (f"{address}, ich sage dir", f"Sei gewarnt, {address}, denn")
+
+    def _prophecy_address(self, persona: PersonaProfile) -> str:
+        if persona.age in {"Kind", "Jugendlicher"}:
+            if persona.gender == "m":
+                return "mein Sohn"
+            if persona.gender == "w":
+                return "meine Tochter"
+            return "Kind"
+
+        if persona.gender == "w":
+            return "Suchende"
+
+        return "Suchender"
 
     def _analysis_input(self, user_text: str, persona: PersonaProfile) -> str:
         return (
@@ -1251,4 +1456,8 @@ class OracleClient:
             f"{analysis}\n\n"
             "JSON-B:\n"
             f"{recommendation}"
-    )
+        )
+
+    def _spellcheck_input(self, prophecy: str) -> str:
+        return prophecy.strip()
+

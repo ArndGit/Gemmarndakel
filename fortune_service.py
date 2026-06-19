@@ -62,6 +62,15 @@ class FortuneTellerService:
 
         return finish()
 
+    def get_stage_variant_names(self) -> dict[str, tuple[str, ...]]:
+        return self._oracle.get_stage_variant_names()
+
+    def set_stage_variant_overrides(
+        self,
+        overrides: dict[str, str | None],
+    ) -> None:
+        self._oracle.set_stage_variant_overrides(overrides)
+
     def tell_fortune(
         self,
         audio: np.ndarray,

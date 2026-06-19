@@ -19,14 +19,14 @@ LM-Studio-kompatibles LLM als Orakel befragt.
 
 ### Starten unter Windows
 
-- `DigitalerWahrsager.bat` startet die App.
+- `Gemmarndakel.bat` startet die App.
 - Falls noch keine `.venv` existiert, fuehrt der Launcher zuerst `uv sync --frozen` aus.
 - `Gemmarndakel.lnk` ist die passende Verknuepfung mit Kerzen-Karo-Icon.
 - Wenn der Projektordner verschoben wurde, `create_shortcut.ps1` ausfuehren, um die Verknuepfung fuer den neuen Pfad neu zu erzeugen.
 
 ### Konfiguration
 
-Die Remote-LLM-Verbindung wird beim Start aus `fortune_teller/remote_llm.yaml`
+Die Remote-LLM-Verbindung wird beim Start aus `remote_llm.yaml`
 gelesen. Wenn die Datei fehlt, wird sie mit diesen Standardwerten erstellt:
 
 ```yaml
@@ -40,7 +40,7 @@ prophecy_reasoning_enabled: true
 ```
 
 `remote_llm.yaml` ist in `.gitignore`, weil dort lokale Credentials stehen
-koennen. Weitere App-Werte koennen optional in `fortune_teller/.env` gesetzt
+koennen. Weitere App-Werte koennen optional in `.env` gesetzt
 werden:
 
 `reasoning_level` bleibt die globale Staerke fuer aktivierte Reasoning-Stufen.
