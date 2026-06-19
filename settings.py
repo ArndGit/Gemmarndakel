@@ -16,6 +16,10 @@ DEFAULT_REMOTE_LLM_CONFIG: dict[str, Any] = {
     "analysis_reasoning_enabled": True,
     "recommendation_reasoning_enabled": True,
     "prophecy_reasoning_enabled": True,
+    "persona_camera_enabled": True,
+    "persona_camera_device_index": 0,
+    "persona_capture_timeout_seconds": 3,
+    "persona_model": None,
 }
 
 
@@ -31,6 +35,10 @@ class AppSettings:
     llm_timeout_seconds: float
     llm_generation_timeout_seconds: float
     llm_model: str
+    persona_camera_enabled: bool
+    persona_camera_device_index: int
+    persona_capture_timeout_seconds: int
+    persona_model: str | None
     prompt_config_file: Path
     prompt_test_question: str
     whisper_model_size: str
@@ -102,6 +110,10 @@ def _write_default_remote_llm_config(path: Path) -> None:
                 "analysis_reasoning_enabled: true",
                 "recommendation_reasoning_enabled: true",
                 "prophecy_reasoning_enabled: true",
+                "persona_camera_enabled: true",
+                "persona_camera_device_index: 0",
+                "persona_capture_timeout_seconds: 3",
+                "persona_model: null",
                 "",
             ]
         ),
@@ -228,6 +240,18 @@ def _read_config_positive_int(config: dict[str, Any], name: str) -> int:
     return value
 
 
+def _read_config_non_negative_int(config: dict[str, Any], name: str) -> int:
+    value = config[name]
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{REMOTE_LLM_CONFIG_FILE.name}: {name} must be an integer.")
+    if value < 0:
+        raise ValueError(
+            f"{REMOTE_LLM_CONFIG_FILE.name}: {name} must be zero or greater."
+        )
+
+    return value
+
+
 def _read_config_bool(config: dict[str, Any], name: str) -> bool:
     value = config[name]
     if isinstance(value, bool):
@@ -278,6 +302,19 @@ def load_settings() -> AppSettings:
         llm_timeout_seconds=_read_float("LLM_TIMEOUT_SECONDS", 5.0),
         llm_generation_timeout_seconds=_read_float("LLM_GENERATION_TIMEOUT_SECONDS", 600.0),
         llm_model=os.getenv("LLM_MODEL", "google/gemma-4-12b-qat"),
+        persona_camera_enabled=_read_config_bool(
+            remote_llm_config,
+            "persona_camera_enabled",
+        ),
+        persona_camera_device_index=_read_config_non_negative_int(
+            remote_llm_config,
+            "persona_camera_device_index",
+        ),
+        persona_capture_timeout_seconds=_read_config_positive_int(
+            remote_llm_config,
+            "persona_capture_timeout_seconds",
+        ),
+        persona_model=_read_config_optional_string(remote_llm_config, "persona_model"),
         prompt_config_file=prompt_config_file,
         prompt_test_question=_read_text(
             "PROMPT_TEST_QUESTION",

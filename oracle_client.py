@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 
 from openai import OpenAI
 
+from persona import PersonaProfile
 from prompt_loader import PromptStage, PromptVariant, load_prompt_config
 from settings import AppSettings
 
@@ -564,8 +565,10 @@ class OracleClient:
     def create_prophecy(
         self,
         user_text: str,
+        persona: PersonaProfile | None = None,
         progress: ProgressCallback | None = None,
     ) -> str:
+        persona_profile = persona or PersonaProfile.unknown()
         started_at = monotonic()
         prompt_config = load_prompt_config(self._settings.prompt_config_file)
         prompt_selector = MersenneTwisterPromptSelector()
@@ -573,6 +576,7 @@ class OracleClient:
             "[LLM] Starting agentic prophecy pipeline: "
             f"model={self._model_id}, "
             f"user_chars={len(user_text)}, "
+            f"persona={persona_profile.as_json()}, "
             f"timeout={self._settings.llm_generation_timeout_seconds}s",
             flush=True,
         )
@@ -597,8 +601,11 @@ class OracleClient:
                 variant_name=analysis_variant.name,
                 phase_fill_color=analysis_variant.fill_color,
                 phase_outline_color=analysis_variant.outline_color,
-                system_prompt=analysis_variant.prompt,
-                user_content=self._analysis_input(user_text),
+                system_prompt=self._build_stage_prompt(
+                    analysis_variant,
+                    prompt_config.analysis.style,
+                ),
+                user_content=self._analysis_input(user_text, persona_profile),
                 progress=progress,
                 temperature=0.25,
             )
@@ -621,9 +628,13 @@ class OracleClient:
                 variant_name=recommendation_variant.name,
                 phase_fill_color=recommendation_variant.fill_color,
                 phase_outline_color=recommendation_variant.outline_color,
-                system_prompt=recommendation_variant.prompt,
+                system_prompt=self._build_stage_prompt(
+                    recommendation_variant,
+                    prompt_config.recommendation.style,
+                ),
                 user_content=self._recommendation_input(
                     user_text,
+                    persona_profile,
                     stage_outputs["analysis"],
                 ),
                 progress=progress,
@@ -643,7 +654,7 @@ class OracleClient:
                 message="Hekates Fackel fällt auf den letzten Faden...",
                 star_count=0,
             )
-            prophecy_prompt = self._build_prophecy_prompt(
+            prophecy_prompt = self._build_stage_prompt(
                 prophecy_variant,
                 prompt_config.prophecy.style,
             )
@@ -659,6 +670,7 @@ class OracleClient:
                 phase_outline_color=prophecy_variant.outline_color,
                 system_prompt=prophecy_prompt,
                 user_content=self._prophecy_input(
+                    persona_profile,
                     stage_outputs["analysis"],
                     stage_outputs["recommendation"],
                 ),
@@ -684,6 +696,7 @@ class OracleClient:
     def create_prophecy_matrix(
         self,
         user_text: str,
+        persona: PersonaProfile | None = None,
         *,
         seed: int | None = None,
         stream_output: bool = False,
@@ -692,6 +705,7 @@ class OracleClient:
         if not normalized_user_text:
             raise ValueError("Prompt test question must not be empty.")
 
+        persona_profile = persona or PersonaProfile.unknown()
         started_at = monotonic()
         prompt_config = load_prompt_config(self._settings.prompt_config_file)
         prompt_selector = MersenneTwisterPromptSelector(seed=seed)
@@ -709,8 +723,11 @@ class OracleClient:
             variant_name=analysis_variant.name,
             phase_fill_color=analysis_variant.fill_color,
             phase_outline_color=analysis_variant.outline_color,
-            system_prompt=analysis_variant.prompt,
-            user_content=self._analysis_input(normalized_user_text),
+            system_prompt=self._build_stage_prompt(
+                analysis_variant,
+                prompt_config.analysis.style,
+            ),
+            user_content=self._analysis_input(normalized_user_text, persona_profile),
             progress=None,
             temperature=0.25,
             stream_output=stream_output,
@@ -733,9 +750,13 @@ class OracleClient:
             variant_name=recommendation_variant.name,
             phase_fill_color=recommendation_variant.fill_color,
             phase_outline_color=recommendation_variant.outline_color,
-            system_prompt=recommendation_variant.prompt,
+            system_prompt=self._build_stage_prompt(
+                recommendation_variant,
+                prompt_config.recommendation.style,
+            ),
             user_content=self._recommendation_input(
                 normalized_user_text,
+                persona_profile,
                 analysis_result.output,
             ),
             progress=None,
@@ -752,6 +773,7 @@ class OracleClient:
         )
 
         prophecy_input = self._prophecy_input(
+            persona_profile,
             analysis_result.output,
             recommendation_result.output,
         )
@@ -777,7 +799,7 @@ class OracleClient:
                 variant_name=prophecy_variant.name,
                 phase_fill_color=prophecy_variant.fill_color,
                 phase_outline_color=prophecy_variant.outline_color,
-                system_prompt=self._build_prophecy_prompt(
+                system_prompt=self._build_stage_prompt(
                     prophecy_variant,
                     prompt_config.prophecy.style,
                 ),
@@ -1179,26 +1201,35 @@ class OracleClient:
         }
         return messages.get((stage_name, phase_state), "Die Zeichen wandern weiter...")
 
-    def _build_prophecy_prompt(
+    def _build_stage_prompt(
         self,
-        prophecy_variant: PromptVariant,
-        prophecy_style: str | None,
+        stage_variant: PromptVariant,
+        stage_style: str | None,
     ) -> str:
-        if prophecy_style is None or prophecy_variant.ignore_style:
-            return prophecy_variant.prompt
+        if stage_style is None or stage_variant.ignore_style:
+            return stage_variant.prompt
 
-        return f"{prophecy_variant.prompt}\n\n{prophecy_style}"
+        return f"{stage_variant.prompt}\n\n{stage_style}"
 
-    def _analysis_input(self, user_text: str) -> str:
+    def _analysis_input(self, user_text: str, persona: PersonaProfile) -> str:
         return (
+            "Persona JSON:\n"
+            f"{persona.as_json()}\n\n"
             "User spoken input:\n"
             "\"\"\"\n"
             f"{user_text.strip()}\n"
             "\"\"\""
         )
 
-    def _recommendation_input(self, user_text: str, analysis: str) -> str:
+    def _recommendation_input(
+        self,
+        user_text: str,
+        persona: PersonaProfile,
+        analysis: str,
+    ) -> str:
         return (
+            "Persona JSON:\n"
+            f"{persona.as_json()}\n\n"
             "Original user spoken input:\n"
             "\"\"\"\n"
             f"{user_text.strip()}\n"
@@ -1206,8 +1237,16 @@ class OracleClient:
             "Analysis from stage A:\n"
             f"{analysis}"
         )
-    def _prophecy_input(self, analysis: str, recommendation: str) -> str:
+
+    def _prophecy_input(
+        self,
+        persona: PersonaProfile,
+        analysis: str,
+        recommendation: str,
+    ) -> str:
         return (
+            "Persona JSON:\n"
+            f"{persona.as_json()}\n\n"
             "JSON-A:\n"
             f"{analysis}\n\n"
             "JSON-B:\n"

@@ -49,6 +49,7 @@ def initialize_app(progress: ProgressCallback) -> AppDependencies:
 
     try:
         progress("Nach göttlichen Dämpfen wird gesucht...", 58)
+        from persona import PersonaCameraAnalyzer
         from transcriber import SpeechTranscriber
 
         transcriber = SpeechTranscriber(
@@ -65,9 +66,11 @@ def initialize_app(progress: ProgressCallback) -> AppDependencies:
         progress("Das Orakel erwacht...", 100)
         from fortune_service import FortuneTellerService
 
+        persona_analyzer = PersonaCameraAnalyzer(settings)
         fortune_teller = FortuneTellerService(
             transcriber,
             oracle,
+            persona_analyzer=persona_analyzer,
             audio_rate=settings.audio_rate,
         )
         return AppDependencies(

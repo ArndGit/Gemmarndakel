@@ -42,6 +42,7 @@ SHUTDOWN_SECONDS = 5.0
 MIN_WINDOW_ALPHA = 0.04
 PROGRESS_SMOOTHING_PER_SECOND = 4.0
 PHASE_MARKER_POSITIONS = {
+    "persona": (156, 96),
     "analysis": (238, 84),
     "recommendation": (320, 96),
     "prophecy": (402, 84),
@@ -289,8 +290,15 @@ class FortuneTellerGUI:
 
     def _capture_and_process(self) -> None:
         try:
+            persona_session = self.fortune_teller.start_persona_capture()
             audio = self.recorder.capture_until_stopped(level_callback=self._set_audio_level)
-            prophecy = self.fortune_teller.tell_fortune(audio, progress=self._set_progress)
+            persona = self.fortune_teller.finish_persona_capture(persona_session)
+            self._after_ui(lambda persona=persona: self._set_persona_marker(persona))
+            prophecy = self.fortune_teller.tell_fortune(
+                audio,
+                persona=persona if hasattr(persona, "as_json") else None,
+                progress=self._set_progress,
+            )
         except (NoAudioError, NoSpeechError) as exc:
             if self._is_shutting_down:
                 return
@@ -510,11 +518,15 @@ class FortuneTellerGUI:
         padding_x = 10
         padding_y = 6
         font = ("Consolas", 10, "bold")
-        width = tkfont.Font(font=font).measure(label)
+        tooltip_font = tkfont.Font(font=font)
+        lines = label.splitlines() or [label]
+        width = max(tooltip_font.measure(line) for line in lines)
+        line_height = tooltip_font.metrics("linespace")
+        text_height = line_height * len(lines)
         x1 = tooltip_x - width / 2 - padding_x
-        y1 = tooltip_y - 14 - padding_y
+        y1 = tooltip_y - text_height - padding_y
         x2 = tooltip_x + width / 2 + padding_x
-        y2 = tooltip_y + 2 + padding_y
+        y2 = tooltip_y + padding_y
         self.canvas.create_rectangle(
             x1,
             y1,
@@ -527,11 +539,12 @@ class FortuneTellerGUI:
         )
         self.canvas.create_text(
             tooltip_x,
-            tooltip_y - 6,
+            tooltip_y - text_height / 2,
             text=label,
             fill="#10151d",
             font=font,
             tags="vignette",
+            justify=tk.CENTER,
         )
 
     def _draw_fullscreen_backdrop(self) -> None:
@@ -717,7 +730,9 @@ class FortuneTellerGUI:
     def _draw_phase_markers(self) -> None:
         now = monotonic()
         self._phase_marker_hitboxes = {}
-        for index, stage_name in enumerate(("analysis", "recommendation", "prophecy")):
+        for index, stage_name in enumerate(
+            ("persona", "analysis", "recommendation", "prophecy")
+        ):
             marker = self._phase_markers.get(stage_name)
             if marker is None:
                 continue
@@ -735,6 +750,36 @@ class FortuneTellerGUI:
             y = base_y + drift_y
             self._phase_marker_hitboxes[stage_name] = (x, y, size + 6.0)
             self._draw_star(x, y, size, fill, outline)
+
+    def _set_persona_marker(self, persona: object) -> None:
+        if not hasattr(persona, "age") or not hasattr(persona, "gender") or not hasattr(persona, "mood"):
+            age = "unknown"
+            gender = "unknown"
+            mood = "unknown"
+        else:
+            age = str(getattr(persona, "age", "unknown"))
+            gender = str(getattr(persona, "gender", "unknown"))
+            mood = str(getattr(persona, "mood", "unknown"))
+
+        label = (
+            "Persona\n"
+            f"Alter: {age}\n"
+            f"Geschlecht: {gender}\n"
+            f"Stimmung: {mood}"
+        )
+        if age == "unknown" and gender == "unknown" and mood == "unknown":
+            fill_color = "#9c9c9c"
+            outline_color = "#dfdfdf"
+        else:
+            fill_color = "#8fd6c2"
+            outline_color = "#e8fff8"
+
+        self._phase_markers["persona"] = (
+            label,
+            fill_color,
+            outline_color,
+            monotonic(),
+        )
 
     def _draw_candle_scene(self) -> None:
         flame_on = self.mode == "recording"
