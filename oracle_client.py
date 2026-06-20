@@ -677,7 +677,7 @@ class OracleClient:
                 variant_name=recommendation_variant.name,
                 phase_fill_color=recommendation_variant.fill_color,
                 phase_outline_color=recommendation_variant.outline_color,
-                message="Hermes trÃ¤gt ein verborgenes Zeichen heran...",
+                message="Hermes trägt ein verborgenes Zeichen heran...",
                 star_count=0,
             )
             stage_outputs["recommendation"] = self._run_llm_stage(
@@ -711,7 +711,7 @@ class OracleClient:
                 variant_name=prophecy_variant.name,
                 phase_fill_color=prophecy_variant.fill_color,
                 phase_outline_color=prophecy_variant.outline_color,
-                message="Hekates Fackel fÃ¤llt auf den letzten Faden...",
+                message="Hekates Fackel fällt auf den letzten Faden...",
                 star_count=0,
             )
             prophecy_prompt = self._build_stage_prompt(
@@ -1331,9 +1331,9 @@ class OracleClient:
         messages = {
             ("analysis", "reasoning"): "Ich lausche den Echos aus dem Tartaros...",
             ("analysis", "answer"): "Athene ordnet die Splitter im Rauch...",
-            ("analysis", "done"): "Der erste Faden glÃ¤nzt im Licht der Moiren.",
+            ("analysis", "done"): "Der erste Faden glänzt im Licht der Moiren.",
             ("recommendation", "reasoning"): "Hekate hebt die Fackel an die Schwelle...",
-            ("recommendation", "answer"): "Hermes flÃ¼stert zwischen Schatten und Schwur...",
+            ("recommendation", "answer"): "Hermes flüstert zwischen Schatten und Schwur...",
             ("recommendation", "done"): "Der zweite Faden ruht unter dunklem Lorbeer.",
             ("prophecy", "reasoning"): "Apollons Leier klingt hinter dem Nebel...",
             ("prophecy", "answer"): "Die Moiren ziehen den Spruch aus der Nacht...",
