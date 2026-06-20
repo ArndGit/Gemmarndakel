@@ -34,8 +34,8 @@ address: "http://127.0.0.1:1234/v1"
 api_key: null
 min_token_size: 10000
 reasoning_level: "low"
-analysis_reasoning_enabled: true
-recommendation_reasoning_enabled: true
+therapy_plan_reasoning_enabled: true
+scenario_reasoning_enabled: true
 prophecy_reasoning_enabled: true
 ```
 
@@ -63,9 +63,9 @@ diese Stufe kein `reasoning_effort` an das lokale LLM gesendet.
 
 `config.json` trennt den Orakel-Prompt in drei Stufen:
 
-- `analysis`: analysiert den Sprach-Input und gibt internes JSON aus
-- `recommendation`: nutzt die Analyse und erzeugt eine interne Empfehlung als JSON
-- `prophecy`: nutzt nur Analyse und Empfehlung und erzeugt den Kartentext
+- `therapy_plan`: analysiert den Sprach-Input und gibt internes JSON aus
+- `scenario`: nutzt den Therapy Plan und erzeugt ein internes Zukunftsszenario als JSON
+- `prophecy`: nutzt nur Therapy Plan und Scenario und erzeugt den Kartentext
 
 Jede Variante enthält eine `color` im HTML-Format und ein Gewicht. Die Auswahl
 erfolgt zufällig per Mersenne Twister, initialisiert aus OS-Entropy, und wird in
@@ -74,7 +74,7 @@ zusätzlich explizite `STATUS_TRANSITION`-Events fuer `selected`, `reasoning`,
 `answer` und `done` inklusive der Farbe der gezogenen Variante. Die
 Fortschrittsanzeige ist event-basiert und wird nur grafisch geglättet.
 
-Bei `recommendation` gibt es `b-positive` und `b-negative`. Bei `prophecy` wird
+Bei `scenario` werden die B-Varianten nach Gewicht gezogen. Bei `prophecy` wird
 immer `style` dynamisch an die gezogene Variante angehängt; nur dort wird die
 deutsche Kartenausgabe erzwungen.
 
@@ -87,7 +87,7 @@ Kurzname, nach Stufe gruppiert.
 Der direkte Prompt-Test umgeht Tkinter, Splash, Audio und Whisper. Er:
 
 - liest die Frage aus `PROMPT_TEST_QUESTION` oder `--question`
-- zieht genau eine `analysis`-Variante und eine `recommendation`-Variante nach Gewicht
+- zieht genau eine `therapy_plan`-Variante und eine `scenario`-Variante nach Gewicht
 - verwendet diese Zwischenresultate fuer alle `prophecy`-Varianten
 - schreibt eine CSV mit einer Zeile pro Prophezeiungsvariante
 

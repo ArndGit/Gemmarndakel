@@ -13,8 +13,8 @@ DEFAULT_REMOTE_LLM_CONFIG: dict[str, Any] = {
     "api_key": None,
     "min_token_size": 10_000,
     "reasoning_level": "low",
-    "analysis_reasoning_enabled": True,
-    "recommendation_reasoning_enabled": True,
+    "therapy_plan_reasoning_enabled": True,
+    "scenario_reasoning_enabled": True,
     "prophecy_reasoning_enabled": True,
     "persona_camera_enabled": True,
     "persona_camera_device_index": 0,
@@ -29,8 +29,8 @@ class AppSettings:
     llm_api_key: str | None
     llm_min_token_size: int
     llm_reasoning_level: str
-    llm_analysis_reasoning_enabled: bool
-    llm_recommendation_reasoning_enabled: bool
+    llm_therapy_plan_reasoning_enabled: bool
+    llm_scenario_reasoning_enabled: bool
     llm_prophecy_reasoning_enabled: bool
     llm_timeout_seconds: float
     llm_generation_timeout_seconds: float
@@ -107,8 +107,8 @@ def _write_default_remote_llm_config(path: Path) -> None:
                 "api_key: null",
                 "min_token_size: 10000",
                 'reasoning_level: "low"',
-                "analysis_reasoning_enabled: true",
-                "recommendation_reasoning_enabled: true",
+                "therapy_plan_reasoning_enabled: true",
+                "scenario_reasoning_enabled: true",
                 "prophecy_reasoning_enabled: true",
                 "persona_camera_enabled: true",
                 "persona_camera_device_index: 0",
@@ -197,6 +197,12 @@ def _load_remote_llm_config() -> dict[str, Any]:
 
     config = dict(DEFAULT_REMOTE_LLM_CONFIG)
     config.update(_read_flat_yaml(REMOTE_LLM_CONFIG_FILE))
+    if "analysis_reasoning_enabled" in config:
+        config["therapy_plan_reasoning_enabled"] = config["analysis_reasoning_enabled"]
+    if "recommendation_reasoning_enabled" in config:
+        config["scenario_reasoning_enabled"] = config["recommendation_reasoning_enabled"]
+    config.pop("analysis_reasoning_enabled", None)
+    config.pop("recommendation_reasoning_enabled", None)
     unknown_keys = sorted(set(config) - set(DEFAULT_REMOTE_LLM_CONFIG))
     if unknown_keys:
         joined_keys = ", ".join(unknown_keys)
@@ -287,13 +293,13 @@ def load_settings() -> AppSettings:
             "min_token_size",
         ),
         llm_reasoning_level=_read_config_string(remote_llm_config, "reasoning_level"),
-        llm_analysis_reasoning_enabled=_read_config_bool(
+        llm_therapy_plan_reasoning_enabled=_read_config_bool(
             remote_llm_config,
-            "analysis_reasoning_enabled",
+            "therapy_plan_reasoning_enabled",
         ),
-        llm_recommendation_reasoning_enabled=_read_config_bool(
+        llm_scenario_reasoning_enabled=_read_config_bool(
             remote_llm_config,
-            "recommendation_reasoning_enabled",
+            "scenario_reasoning_enabled",
         ),
         llm_prophecy_reasoning_enabled=_read_config_bool(
             remote_llm_config,

@@ -16,8 +16,8 @@ DEFAULT_OUTPUT_FILE = "prompt_test_results.csv"
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run the oracle prompt pipeline directly: pick one weighted analysis "
-            "variant, pick one weighted recommendation variant, then run every "
+            "Run the oracle prompt pipeline directly: pick one weighted therapy-plan "
+            "variant, pick one weighted scenario variant, then run every "
             "prophecy variant and export the results to CSV."
         )
     )
@@ -34,7 +34,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--seed",
         type=int,
-        help="Optional RNG seed for reproducible weighted A/B variant selection.",
+        help="Optional RNG seed for reproducible weighted Stage A/B variant selection.",
     )
     parser.add_argument(
         "--verbose",
@@ -55,14 +55,14 @@ def _write_csv(path: Path, result: ProphecyMatrixResult) -> None:
             handle,
             fieldnames=[
                 "question",
-                "analysis_variant",
-                "analysis_fill_color",
-                "analysis_outline_color",
-                "analysis_weight",
-                "recommendation_variant",
-                "recommendation_fill_color",
-                "recommendation_outline_color",
-                "recommendation_weight",
+                "therapy_plan_variant",
+                "therapy_plan_fill_color",
+                "therapy_plan_outline_color",
+                "therapy_plan_weight",
+                "scenario_variant",
+                "scenario_fill_color",
+                "scenario_outline_color",
+                "scenario_weight",
                 "prophecy_variant",
                 "prophecy_fill_color",
                 "prophecy_outline_color",
@@ -75,14 +75,14 @@ def _write_csv(path: Path, result: ProphecyMatrixResult) -> None:
             writer.writerow(
                 {
                     "question": _csv_text(result.question),
-                    "analysis_variant": result.analysis.variant_name,
-                    "analysis_fill_color": result.analysis.variant_fill_color,
-                    "analysis_outline_color": result.analysis.variant_outline_color,
-                    "analysis_weight": result.analysis.variant_weight,
-                    "recommendation_variant": result.recommendation.variant_name,
-                    "recommendation_fill_color": result.recommendation.variant_fill_color,
-                    "recommendation_outline_color": result.recommendation.variant_outline_color,
-                    "recommendation_weight": result.recommendation.variant_weight,
+                    "therapy_plan_variant": result.therapy_plan.variant_name,
+                    "therapy_plan_fill_color": result.therapy_plan.variant_fill_color,
+                    "therapy_plan_outline_color": result.therapy_plan.variant_outline_color,
+                    "therapy_plan_weight": result.therapy_plan.variant_weight,
+                    "scenario_variant": result.scenario.variant_name,
+                    "scenario_fill_color": result.scenario.variant_fill_color,
+                    "scenario_outline_color": result.scenario.variant_outline_color,
+                    "scenario_weight": result.scenario.variant_weight,
                     "prophecy_variant": prophecy.variant_name,
                     "prophecy_fill_color": prophecy.variant_fill_color,
                     "prophecy_outline_color": prophecy.variant_outline_color,
@@ -118,19 +118,19 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     print(f"[PromptTest] Question: {result.question}", flush=True)
     print(
-        "[PromptTest] Picked analysis variant: "
-        f"{result.analysis.variant_name} "
-        f"(weight={result.analysis.variant_weight:g}, "
-        f"fill={result.analysis.variant_fill_color}, "
-        f"outline={result.analysis.variant_outline_color})",
+        "[PromptTest] Picked therapy-plan variant: "
+        f"{result.therapy_plan.variant_name} "
+        f"(weight={result.therapy_plan.variant_weight:g}, "
+        f"fill={result.therapy_plan.variant_fill_color}, "
+        f"outline={result.therapy_plan.variant_outline_color})",
         flush=True,
     )
     print(
-        "[PromptTest] Picked recommendation variant: "
-        f"{result.recommendation.variant_name} "
-        f"(weight={result.recommendation.variant_weight:g}, "
-        f"fill={result.recommendation.variant_fill_color}, "
-        f"outline={result.recommendation.variant_outline_color})",
+        "[PromptTest] Picked scenario variant: "
+        f"{result.scenario.variant_name} "
+        f"(weight={result.scenario.variant_weight:g}, "
+        f"fill={result.scenario.variant_fill_color}, "
+        f"outline={result.scenario.variant_outline_color})",
         flush=True,
     )
     print(

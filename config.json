@@ -1,87 +1,87 @@
 {
-  "analysis": {
+  "therapy_plan": {
     "variants": [
       {
         "name": "a-confrontation",
         "fill_color": "#ff6b6b",
         "outline_color": "#7a1f2a",
         "weight": 2,
-        "prompt": "The hidden recommendation tendency is direct confrontation: face the central issue, name the avoided truth, admit what is already known, or stop postponing the decisive act. Set recommendation_style to \"confrontation\"."
+        "prompt": "The hidden therapy-plan tendency is direct confrontation: face the central issue, name the avoided truth, admit what is already known, or stop postponing the decisive act. Set therapy_plan_style to \"confrontation\"."
       },
       {
         "name": "a-family-origin",
         "fill_color": "#f6bd60",
         "outline_color": "#8b5e34",
         "weight": 2,
-        "prompt": "The hidden recommendation tendency is family-origin reflection: notice an old pattern with parents, siblings, childhood authority, inherited expectations, family guilt, approval hunger, or family boundaries. Set recommendation_style to \"family-origin\"."
+        "prompt": "The hidden therapy-plan tendency is family-origin reflection: notice an old pattern with parents, siblings, childhood authority, inherited expectations, family guilt, approval hunger, or family boundaries. Set therapy_plan_style to \"family-origin\"."
       },
       {
         "name": "a-communication",
         "fill_color": "#2ec4b6",
         "outline_color": "#0f6b63",
         "weight": 3,
-        "prompt": "The hidden recommendation tendency is honest communication: speak plainly, ask the direct question, reveal the hidden concern, apologize, request clarification, stop hinting, or replace guessing with a real conversation. Set recommendation_style to \"honest communication\"."
+        "prompt": "The hidden therapy-plan tendency is honest communication: speak plainly, ask the direct question, reveal the hidden concern, apologize, request clarification, stop hinting, or replace guessing with a real conversation. Set therapy_plan_style to \"honest communication\"."
       },
       {
         "name": "a-boundary-setting",
         "fill_color": "#3a86ff",
         "outline_color": "#163b73",
         "weight": 3,
-        "prompt": "The hidden recommendation tendency is boundary setting: say no, reduce access, stop rescuing someone, protect time, refuse manipulation, clarify a limit, end an unhealthy obligation, or separate compassion from self-sacrifice. Set recommendation_style to \"boundary setting\"."
+        "prompt": "The hidden therapy-plan tendency is boundary setting: say no, reduce access, stop rescuing someone, protect time, refuse manipulation, clarify a limit, end an unhealthy obligation, or separate compassion from self-sacrifice. Set therapy_plan_style to \"boundary setting\"."
       },
       {
         "name": "a-acceptance",
         "fill_color": "#8093f1",
         "outline_color": "#39427a",
         "weight": 3,
-        "prompt": "The hidden recommendation tendency is acceptance and patience: stop forcing an immediate outcome, tolerate uncertainty, accept what cannot yet change, endure discomfort without drama, or let time reveal what pressure would distort. Set recommendation_style to \"acceptance\"."
+        "prompt": "The hidden therapy-plan tendency is acceptance and patience: stop forcing an immediate outcome, tolerate uncertainty, accept what cannot yet change, endure discomfort without drama, or let time reveal what pressure would distort. Set therapy_plan_style to \"acceptance\"."
       },
       {
         "name": "a-behavioral-action",
         "fill_color": "#8338ec",
         "outline_color": "#3d1778",
         "weight": 3,
-        "prompt": "The hidden recommendation tendency is concrete action: leave the thought-loop and perform one useful act, such as making the call, writing the message, booking the appointment, applying, leaving the house, asking for help, or completing the first task. Set recommendation_style to \"concrete action\"."
+        "prompt": "The hidden therapy-plan tendency is concrete action: leave the thought-loop and perform one useful act, such as making the call, writing the message, booking the appointment, applying, leaving the house, asking for help, or completing the first task. Set therapy_plan_style to \"concrete action\"."
       },
       {
         "name": "a-cognitive-reframe",
         "fill_color": "#ff66c4",
         "outline_color": "#7a245f",
         "weight": 2,
-        "prompt": "The hidden recommendation tendency is changed interpretation: stop treating fear as fact, test a catastrophic thought, stop mind-reading, stop idealizing, stop personalizing, notice missing evidence, or separate shame from truth. Set recommendation_style to \"changed interpretation\"."
+        "prompt": "The hidden therapy-plan tendency is changed interpretation: stop treating fear as fact, test a catastrophic thought, stop mind-reading, stop idealizing, stop personalizing, notice missing evidence, or separate shame from truth. Set therapy_plan_style to \"changed interpretation\"."
       },
       {
         "name": "a-shadow-work",
         "fill_color": "#b07cff",
         "outline_color": "#55308f",
         "weight": 1,
-        "prompt": "The hidden recommendation tendency is hidden motive recognition: notice envy, desire for control, hunger for admiration, resentment, revenge fantasy, dependency, cowardice, pride, possessiveness, or pleasure in being wronged. Set recommendation_style to \"hidden motive\"."
+        "prompt": "The hidden therapy-plan tendency is hidden motive recognition: notice envy, desire for control, hunger for admiration, resentment, revenge fantasy, dependency, cowardice, pride, possessiveness, or pleasure in being wronged. Set therapy_plan_style to \"hidden motive\"."
       },
       {
         "name": "a-letting-go",
         "fill_color": "#f497b6",
         "outline_color": "#7b3a56",
         "weight": 2,
-        "prompt": "The hidden recommendation tendency is letting go: stop chasing what remains unavailable, release an old image, accept a lost chance, end a fantasy, grieve properly, or stop negotiating with a closed door. Set recommendation_style to \"letting go\"."
+        "prompt": "The hidden therapy-plan tendency is letting go: stop chasing what remains unavailable, release an old image, accept a lost chance, end a fantasy, grieve properly, or stop negotiating with a closed door. Set therapy_plan_style to \"letting go\"."
       },
       {
         "name": "a-repair",
         "fill_color": "#d95d39",
         "outline_color": "#6c2417",
         "weight": 2,
-        "prompt": "The hidden recommendation tendency is repair and accountability: apologize, admit harm, correct a lie, repay a debt, restore trust through action, make amends without demanding forgiveness, or stop defending damaging behavior. Set recommendation_style to \"repair\"."
+        "prompt": "The hidden therapy-plan tendency is repair and accountability: apologize, admit harm, correct a lie, repay a debt, restore trust through action, make amends without demanding forgiveness, or stop defending damaging behavior. Set therapy_plan_style to \"repair\"."
       },
       {
         "name": "a-self-protection",
         "fill_color": "#ef233c",
         "outline_color": "#6c1120",
         "weight": 2,
-        "prompt": "The hidden recommendation tendency is self-protection: take a warning sign seriously, preserve evidence, leave an unsafe dynamic, delay trust, avoid manipulation, protect money or reputation, ask an outsider, or stop giving access to someone dangerous. Set recommendation_style to \"self-protection\"."
+        "prompt": "The hidden therapy-plan tendency is self-protection: take a warning sign seriously, preserve evidence, leave an unsafe dynamic, delay trust, avoid manipulation, protect money or reputation, ask an outsider, or stop giving access to someone dangerous. Set therapy_plan_style to \"self-protection\"."
       }
     ],
-    "style": "You are stage A of a three-stage oracle pipeline. Use the original spoken input and the Persona JSON. Create one compact psychological reading and one hidden recommendation tendency. Do not write a prophecy. Do not create a future scenario. Do not compare alternatives. Use the first fitting interpretation and stop. Allowed psychological patterns: desire for recognition; need for safety; fear of rejection; fear of failure; avoidance; dependency; overconfidence; loneliness; inner conflict; curiosity; shame; guilt; jealousy; resentment; grief; impatience; perfectionism; people-pleasing; control need; distrust; idealization; self-doubt; ambition; restlessness; nostalgia; denial; escapism; emotional exhaustion; hidden anger; longing for belonging; fear of change; need for clarity; need for autonomy; attachment anxiety; defensive pride; moral uncertainty; hope after disappointment; pressure to decide. The Persona JSON is a hard plausibility constraint. Age, gender, and mood must shape the reading, human_focus, and hidden recommendation. Keep the life situation plausible for that life stage. If persona.age is Kind or Jugendlicher, avoid threats of death, sexual material, addiction imagery, ruin, adult bureaucracy, marriage collapse, or irreversible catastrophe; use school, parents, friends, boundaries, courage, belonging, and emotional safety instead. If persona.age is Rentner, avoid school success, teenage rites, or adolescent peer drama unless the spoken input clearly requires it. Mildly stereotypical gender-coded framing is allowed for this folkloric oracle style when it fits the persona and spoken input, but do not make it absurd or contradictory. If the persona is unknown, stay broadly adult-safe and neutral. Output only this JSON shape: {\"pattern\":\"...\",\"emotional_need\":\"...\",\"fear\":\"...\",\"blind_spot\":\"...\",\"recommendation_style\":\"...\",\"hidden_recommendation\":\"...\",\"human_focus\":\"...\",\"confidence\":0.0}. Keep every string short and concrete. Use a number between 0.0 and 1.0 for confidence. No markdown and no text outside the JSON."
+    "style": "You are stage A of a three-stage oracle pipeline. Use the original spoken input and the Persona JSON. Create one compact psychological reading and one hidden therapy plan tendency. Do not write a prophecy. Do not create a future scenario. Do not compare alternatives. Use the first fitting interpretation and stop. Allowed psychological patterns: desire for recognition; need for safety; fear of rejection; fear of failure; avoidance; dependency; overconfidence; loneliness; inner conflict; curiosity; shame; guilt; jealousy; resentment; grief; impatience; perfectionism; people-pleasing; control need; distrust; idealization; self-doubt; ambition; restlessness; nostalgia; denial; escapism; emotional exhaustion; hidden anger; longing for belonging; fear of change; need for clarity; need for autonomy; attachment anxiety; defensive pride; moral uncertainty; hope after disappointment; pressure to decide. The Persona JSON is a hard plausibility constraint. Age, gender, and mood must shape the reading, human_focus, and hidden therapy plan. Keep the life situation plausible for that life stage. If persona.age is Kind or Jugendlicher, avoid threats of death, sexual material, addiction imagery, ruin, adult bureaucracy, marriage collapse, or irreversible catastrophe; use school, parents, friends, boundaries, courage, belonging, and emotional safety instead. If persona.age is Rentner, avoid school success, teenage rites, or adolescent peer drama unless the spoken input clearly requires it. Mildly stereotypical gender-coded framing is allowed for this folkloric oracle style when it fits the persona and spoken input, but do not make it absurd or contradictory. If the persona is unknown, stay broadly adult-safe and neutral. Output only this JSON shape: {\"pattern\":\"...\",\"emotional_need\":\"...\",\"fear\":\"...\",\"blind_spot\":\"...\",\"therapy_plan_style\":\"...\",\"hidden_therapy_plan\":\"...\",\"human_focus\":\"...\",\"confidence\":0.0}. Keep every string short and concrete. Use a number between 0.0 and 1.0 for confidence. No markdown and no text outside the JSON."
   },
-  "recommendation": {
+  "scenario": {
     "variants": [
       {
         "name": "b-blessing-scenario",
@@ -136,7 +136,7 @@
     "style": "You are stage B of a three-stage oracle pipeline. Use the JSON from stage A and the Persona JSON. Do not use the original spoken input directly. Create one concrete future scenario. The Persona JSON is a hard plausibility constraint. The scenario must fit the life stage, likely social world, and mood of the persona. If persona.age is Kind or Jugendlicher, keep the scenario within family, school, friendship, confidence, protection, or early aspiration; avoid death threats, sexual implications, addiction, legal ruin, marriage collapse, and catastrophic adult stakes. If persona.age is Rentner, avoid school exams, teenage rites, or youthful peer drama unless JSON-A clearly supports it. Mildly stereotypical gender-coded details are allowed if they add folkloric charm and still fit the persona and JSON-A. Do not write a prophecy. Do not use oracle style. Do not give advice. Output only this JSON shape: {\"scenario_type\":\"...\",\"future_event\":\"...\",\"omen\":\"...\",\"human_detail\":\"...\",\"turning_point\":\"...\",\"outcome_direction\":\"...\",\"confidence\":0.0}. Keep every string short and concrete. No markdown and no text outside the JSON."
   },
   "prophecy": {
-    "style": "Stage C only stylizes the JSON from stage A and stage B. Use the Persona JSON together with only the psychological reading from stage A and the future scenario from stage B as source material. Persona is a hard plausibility constraint for imagery, social roles, life context, and wording. The final text must contain at least one visible hint of the Persona JSON, not just hidden plausibility: reflect age, social world, mood, role, or gender-coded address in concrete wording or imagery that a reader could notice. Write the final answer immediately. Output exactly one German paragraph. Begin with the exact opening phrase from the selected prophecy variant. Write only the prophecy itself: one ambiguous future vision, not advice and not analysis. Use antiquated, elevated German: solemn, image-rich, rhythmical, slightly old-fashioned, clear, not parody, not dialect. Let the selected vision tradition color the imagery lightly. Keep the result ambiguous enough that it feels like an omen rather than a literal answer. If persona.age is Kind or Jugendlicher, avoid death threats, sexual content, adult ruin, and fatalistic condemnation; speak in a protective, uncanny, age-plausible way and use details from family, school, friendship, shelter, belonging, or growing courage. If persona.age is Rentner, avoid school-success or adolescent milestones unless JSON-A and JSON-B clearly require them, and prefer age-plausible details such as memory, household rhythm, health caution, grown family, or late journeys. Mildly stereotypical gender-coded imagery is allowed when it fits the persona and contributes to the project's folkloric charm, but do not make the prophecy absurd or contradictory. No notes, no checks, no drafts, no labels, no markdown.",
+    "style": "Stage C only stylizes the JSON from stage A and stage B. Use the Persona JSON together with only the psychological reading from stage A and the future scenario from stage B as source material. Persona is a hard plausibility constraint for imagery, social roles, life context, and wording. The final text must contain at least one visible hint of the Persona JSON, not just hidden plausibility: reflect age, social world, mood, role, or gender-coded address in concrete wording or imagery that a reader could notice. Write the final answer immediately. Output exactly one German paragraph. Begin with the exact opening phrase from the selected prophecy variant. Write only the prophecy itself: one ambiguous future vision, not advice and not therapy-plan prose. Use antiquated, elevated German: solemn, image-rich, rhythmical, slightly old-fashioned, clear, not parody, not dialect. Let the selected vision tradition color the imagery lightly. Keep the result ambiguous enough that it feels like an omen rather than a literal answer. If persona.age is Kind or Jugendlicher, avoid death threats, sexual content, adult ruin, and fatalistic condemnation; speak in a protective, uncanny, age-plausible way and use details from family, school, friendship, shelter, belonging, or growing courage. If persona.age is Rentner, avoid school-success or adolescent milestones unless JSON-A and JSON-B clearly require them, and prefer age-plausible details such as memory, household rhythm, health caution, grown family, or late journeys. Mildly stereotypical gender-coded imagery is allowed when it fits the persona and contributes to the project's folkloric charm, but do not make the prophecy absurd or contradictory. No notes, no checks, no drafts, no labels, no markdown.",
     "variants": [
       {
         "name": "c-delphic-oracle",

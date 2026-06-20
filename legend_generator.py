@@ -8,8 +8,8 @@ from prompt_loader import PromptConfig, PromptStage, PromptVariant, load_prompt_
 
 
 STAGE_SPECS = (
-    ("analysis", "Stage A", "Analysis", "#ff8c42"),
-    ("recommendation", "Stage B", "Recommendation", "#2ec4b6"),
+    ("therapy_plan", "Stage A", "Therapy Plan", "#ff8c42"),
+    ("scenario", "Stage B", "Scenario", "#2ec4b6"),
     ("prophecy", "Stage C", "Prophecy", "#e71d36"),
 )
 

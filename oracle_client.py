@@ -19,14 +19,14 @@ from settings import AppSettings
 
 ProgressCallback = Callable[..., None]
 PHASE_PROGRESS: dict[tuple[str, str], int] = {
-    ("analysis", "selected"): 10,
-    ("analysis", "reasoning"): 16,
-    ("analysis", "answer"): 24,
-    ("analysis", "done"): 32,
-    ("recommendation", "selected"): 38,
-    ("recommendation", "reasoning"): 44,
-    ("recommendation", "answer"): 54,
-    ("recommendation", "done"): 64,
+    ("therapy_plan", "selected"): 10,
+    ("therapy_plan", "reasoning"): 16,
+    ("therapy_plan", "answer"): 24,
+    ("therapy_plan", "done"): 32,
+    ("scenario", "selected"): 38,
+    ("scenario", "reasoning"): 44,
+    ("scenario", "answer"): 54,
+    ("scenario", "done"): 64,
     ("prophecy", "selected"): 70,
     ("prophecy", "reasoning"): 76,
     ("prophecy", "answer"): 88,
@@ -35,6 +35,248 @@ PHASE_PROGRESS: dict[tuple[str, str], int] = {
     ("spellcheck", "reasoning"): 94,
     ("spellcheck", "answer"): 97,
     ("spellcheck", "done"): 98,
+}
+_PHASE_MESSAGE_PARTS: dict[tuple[str, str], tuple[tuple[str, ...], tuple[str, ...]]] = {
+    ("therapy_plan", "selected"): (
+        (
+            "Die Moiren tasten nach dem ersten Faden.",
+            "Athene hebt die erste Scherbe aus dem Rauch.",
+            "Am Anfang der Deutung regt sich ein stiller Zug.",
+            "Der erste Kreis der Lesung schließt sich langsam.",
+        ),
+        (
+            "Die innere Ordnung wird gesucht.",
+            "Ein verborgenes Muster drängt ans Licht.",
+            "Die Frage legt ihr erstes Gesicht frei.",
+            "Das Herz der Unruhe wird vorsichtig berührt.",
+            "Ein stiller Plan tritt aus dem Schatten.",
+        ),
+    ),
+    ("therapy_plan", "reasoning"): (
+        (
+            "Ich lausche den Echos aus dem Tartaros.",
+            "Athene neigt sich über die rauchenden Splitter.",
+            "Unter dem ersten Schleier ordnet sich ein Gedanke.",
+            "Die innere Karte wird Stein um Stein gelegt.",
+        ),
+        (
+            "Verdeckte Ursachen treten hervor.",
+            "Das Bedürfnis hinter der Frage wird hörbar.",
+            "Ein blinder Fleck zeichnet seinen Rand.",
+            "Der verborgene Zug der Seele nimmt Form an.",
+            "Die stille Spannung erhält einen Namen.",
+        ),
+    ),
+    ("therapy_plan", "answer"): (
+        (
+            "Athene ordnet die Splitter im Rauch.",
+            "Der erste Spruch sammelt sich zur Form.",
+            "Die Deutung rinnt in klarere Linien.",
+            "Die erste Lesung bindet ihre Knoten.",
+        ),
+        (
+            "Ein innerer Faden wird sichtbar.",
+            "Das Verborgene schreibt sich in Zeichen.",
+            "Die Wurzel der Frage spricht leiser, aber klarer.",
+            "Die seelische Spur tritt aus dem Nebel.",
+            "Die verborgene Richtung zeigt ihr Gesicht.",
+        ),
+    ),
+    ("therapy_plan", "done"): (
+        (
+            "Der erste Faden glänzt im Licht der Moiren.",
+            "Die innere Lesung liegt gefasst bereit.",
+            "Der erste Kreis der Deutung ist geschlossen.",
+            "Athene legt die erste Tafel beiseite.",
+        ),
+        (
+            "Der verborgene Plan ist benannt.",
+            "Die innere Ordnung ruht vorerst still.",
+            "Die erste Schicht der Frage ist geöffnet.",
+            "Das seelische Muster steht im Zeichenkreis.",
+            "Die erste Antwort schweigt nun fest.",
+        ),
+    ),
+    ("scenario", "selected"): (
+        (
+            "Hermes trägt ein verborgenes Zeichen heran.",
+            "Der zweite Faden hebt sich aus dem Dämmer.",
+            "An der Schwelle der Zukunft regt sich ein Schritt.",
+            "Ein kommendes Bild sucht seinen Eingang.",
+        ),
+        (
+            "Die Szene von morgen will Gestalt gewinnen.",
+            "Ein mögliches Ereignis verlangt nach Stimme.",
+            "Die Zukunft tastet nach einem Umriss.",
+            "Ein Omen sucht sein weltliches Gewand.",
+            "Der Weg der nächsten Wendung öffnet sich.",
+        ),
+    ),
+    ("scenario", "reasoning"): (
+        (
+            "Hekate hebt die Fackel an die Schwelle.",
+            "Hermes zählt die Wege zwischen Tür und Tor.",
+            "Der zweite Kreis der Lesung wird abgemessen.",
+            "Im Dämmer der Möglichkeiten formt sich ein Bild.",
+        ),
+        (
+            "Ein künftiges Ereignis sucht seine Stunde.",
+            "Das Omen wägt Nähe und Gefahr.",
+            "Die Welt der nächsten Tage wird befragt.",
+            "Ein kommender Zug bindet sich an den ersten Faden.",
+            "Die Zukunft legt ihre Schuhe an.",
+        ),
+    ),
+    ("scenario", "answer"): (
+        (
+            "Hermes flüstert zwischen Schatten und Schwur.",
+            "Das zweite Bild tritt an den Rand der Karte.",
+            "Die Zukunft gießt sich in irdische Zeichen.",
+            "Ein Omen nimmt sein sichtbares Kleid an.",
+        ),
+        (
+            "Der kommende Schritt wird greifbar.",
+            "Ein weltliches Ereignis hebt den Schleier.",
+            "Das Nächste spricht in klareren Bildern.",
+            "Die Szene der Zukunft rückt näher.",
+            "Die Wendung des Weges wird benannt.",
+        ),
+    ),
+    ("scenario", "done"): (
+        (
+            "Der zweite Faden ruht unter dunklem Lorbeer.",
+            "Die Szene der Zukunft liegt gebunden vor.",
+            "Das Omen der nächsten Wendung steht fest.",
+            "Der zweite Kreis der Deutung ist geschlossen.",
+        ),
+        (
+            "Das kommende Bild schweigt nun klar.",
+            "Die Zukunft hat ihren Umriss gezeigt.",
+            "Ein Ereignis steht im Schatten bereit.",
+            "Der Weg vor der Tür ist bezeichnet.",
+            "Das zweite Zeichen hält seine Form.",
+        ),
+    ),
+    ("prophecy", "selected"): (
+        (
+            "Hekates Fackel fällt auf den letzten Faden.",
+            "Apollons Atem streift den Rand der Karte.",
+            "Der letzte Kreis der Vision hebt an.",
+            "Das Orakel hebt die Stimme aus der Nacht.",
+        ),
+        (
+            "Der Spruch sucht seinen Klang.",
+            "Die Vision verlangt nach ihrer Zunge.",
+            "Das Omen will in alte Worte treten.",
+            "Die letzte Form der Weissagung erwacht.",
+            "Die Karte wartet auf ihren Satz.",
+        ),
+    ),
+    ("prophecy", "reasoning"): (
+        (
+            "Apollons Leier klingt hinter dem Nebel.",
+            "Die letzte Vision zieht durch den Tempelrauch.",
+            "Am Rand der Nacht sammelt sich der Spruch.",
+            "Das Orakel neigt sein Ohr dem letzten Faden.",
+        ),
+        (
+            "Bild und Schicksal suchen einen Ton.",
+            "Die Zeichen bitten um ihre alte Sprache.",
+            "Ein Omen formt sich zur Weissagung.",
+            "Die Bilder werden zu einem einzigen Atem.",
+            "Der Spruch wägt Gold gegen Schatten.",
+        ),
+    ),
+    ("prophecy", "answer"): (
+        (
+            "Die Moiren ziehen den Spruch aus der Nacht.",
+            "Der letzte Satz tropft aus dem Sternenrauch.",
+            "Die Karte nimmt die Weissagung auf.",
+            "Die Vision schreibt sich in den Rand des Lichts.",
+        ),
+        (
+            "Das Omen spricht nun in Bildern.",
+            "Die Zukunft singt mit altem Mund.",
+            "Der Spruch legt sich auf die Karte.",
+            "Die Weissagung erhält ihre Gestalt.",
+            "Das Zeichen wird zu hörbarem Schicksal.",
+        ),
+    ),
+    ("prophecy", "done"): (
+        (
+            "Das Zeichen sinkt auf die Karte.",
+            "Der Spruch ruht im letzten Licht.",
+            "Die Weissagung hat ihren Platz gefunden.",
+            "Der letzte Kreis der Vision ist geschlossen.",
+        ),
+        (
+            "Die Karte trägt nun ihr Omen.",
+            "Das Bild der Zukunft ist gesprochen.",
+            "Die Nacht gibt den Satz nicht mehr frei.",
+            "Der Spruch liegt im offenen Zeichen.",
+            "Die Vision steht still auf dem Papier.",
+        ),
+    ),
+    ("spellcheck", "selected"): (
+        (
+            "Der letzte Blick gleitet über den Spruch.",
+            "Eine stille Hand hebt die Feder der Korrektur.",
+            "Die Schrift wird noch einmal an das Licht gehalten.",
+            "Der Nachhall der Worte wird geprüft.",
+        ),
+        (
+            "Der Feinschliff beginnt.",
+            "Der Randfehler wird gesucht.",
+            "Die letzte Unschärfe soll weichen.",
+            "Die Oberfläche des Spruchs wird geglättet.",
+            "Der Wortlaut wird gewogen.",
+        ),
+    ),
+    ("spellcheck", "reasoning"): (
+        (
+            "Die Schrift wird gegen den Wind gelesen.",
+            "Ein stilles Auge prüft die Fugen der Worte.",
+            "Die letzten Körner im Satz werden gewendet.",
+            "Der Nachklang des Spruchs wird bedacht.",
+        ),
+        (
+            "Feine Risse treten hervor.",
+            "Die Grammatik legt ihre Maßstäbe an.",
+            "Der Ton soll rein bewahrt bleiben.",
+            "Die letzte Unruhe im Satz wird geortet.",
+            "Die Feder prüft jedes Glied der Rede.",
+        ),
+    ),
+    ("spellcheck", "answer"): (
+        (
+            "Der letzte Fehler weicht aus dem Spruch.",
+            "Die Feder glättet die Kanten der Worte.",
+            "Die Schrift fällt sauber in ihr Bett.",
+            "Der Nachhall wird in klares Deutsch gebunden.",
+        ),
+        (
+            "Der Satz gewinnt an Ruhe.",
+            "Die Form wird ohne Verlust geschärft.",
+            "Der Ton bleibt, der Stolperstein fällt.",
+            "Die Rede wird lichter und fester.",
+            "Die letzte Unschärfe verlässt die Zeile.",
+        ),
+    ),
+    ("spellcheck", "done"): (
+        (
+            "Der Spruch liegt bereinigt vor.",
+            "Die letzte Feder ist zur Ruhe gekommen.",
+            "Die Schrift steht nun ohne Wanken.",
+            "Der Feinschliff ist vollendet.",
+        ),
+        (
+            "Kein loser Rand bleibt zurück.",
+            "Der Wortlaut ist fest und klar.",
+            "Die Zeilen halten nun still.",
+            "Der Satzkreis ist geschlossen.",
+            "Die letzte Korrektur ist versiegelt.",
+        ),
+    ),
 }
 SPELLCHECK_SYSTEM_PROMPT = (
     "Du bist die letzte deutsche Korrekturstufe nach einem Orakeltext. "
@@ -130,8 +372,8 @@ class StageRunResult:
 @dataclass(frozen=True)
 class ProphecyMatrixResult:
     question: str
-    analysis: StageRunResult
-    recommendation: StageRunResult
+    therapy_plan: StageRunResult
+    scenario: StageRunResult
     prophecies: tuple[StageRunResult, ...]
 
 
@@ -183,6 +425,8 @@ class OracleClient:
         self._settings = settings
         self._model_id = settings.llm_model
         self._stage_variant_overrides: dict[str, str] = {}
+        self._answer_star_remainder_by_stage: dict[str, float] = {}
+        self._status_message_cache: dict[tuple[str, str], str] = {}
         self._client = OpenAI(
             base_url=settings.lm_studio_url,
             api_key=settings.llm_api_key or "lm-studio",
@@ -197,8 +441,8 @@ class OracleClient:
             f"min_context_tokens={settings.llm_min_token_size}, "
             f"reasoning_effort={settings.llm_reasoning_level}, "
             "stage_reasoning="
-            f"analysis:{self._stage_reasoning_enabled('analysis')},"
-            f"recommendation:{self._stage_reasoning_enabled('recommendation')},"
+            f"therapy_plan:{self._stage_reasoning_enabled('therapy_plan')},"
+            f"scenario:{self._stage_reasoning_enabled('scenario')},"
             f"prophecy:{self._stage_reasoning_enabled('prophecy')}, "
             f"connect_timeout={settings.llm_timeout_seconds}s, "
             f"generation_timeout={settings.llm_generation_timeout_seconds}s",
@@ -208,10 +452,10 @@ class OracleClient:
     def get_stage_variant_names(self) -> dict[str, tuple[str, ...]]:
         prompt_config = load_prompt_config(self._settings.prompt_config_file)
         return {
-            "analysis": tuple(variant.name for variant in prompt_config.analysis.variants),
-            "recommendation": tuple(
-                variant.name for variant in prompt_config.recommendation.variants
+            "therapy_plan": tuple(
+                variant.name for variant in prompt_config.therapy_plan.variants
             ),
+            "scenario": tuple(variant.name for variant in prompt_config.scenario.variants),
             "prophecy": tuple(variant.name for variant in prompt_config.prophecy.variants),
         }
 
@@ -221,8 +465,8 @@ class OracleClient:
     ) -> None:
         prompt_config = load_prompt_config(self._settings.prompt_config_file)
         stages = {
-            "analysis": prompt_config.analysis,
-            "recommendation": prompt_config.recommendation,
+            "therapy_plan": prompt_config.therapy_plan,
+            "scenario": prompt_config.scenario,
             "prophecy": prompt_config.prophecy,
         }
         normalized: dict[str, str] = {}
@@ -237,10 +481,10 @@ class OracleClient:
         self._stage_variant_overrides = normalized
 
     def _stage_reasoning_enabled(self, stage_name: str) -> bool:
-        if stage_name == "analysis":
-            return self._settings.llm_analysis_reasoning_enabled
-        if stage_name == "recommendation":
-            return self._settings.llm_recommendation_reasoning_enabled
+        if stage_name == "therapy_plan":
+            return self._settings.llm_therapy_plan_reasoning_enabled
+        if stage_name == "scenario":
+            return self._settings.llm_scenario_reasoning_enabled
         if stage_name == "prophecy":
             return self._settings.llm_prophecy_reasoning_enabled
         if stage_name == "spellcheck":
@@ -623,6 +867,7 @@ class OracleClient:
     ) -> str:
         persona_profile = persona or PersonaProfile.unknown()
         started_at = monotonic()
+        self._reset_status_message_cache()
         prompt_config = load_prompt_config(self._settings.prompt_config_file)
         prompt_selector = MersenneTwisterPromptSelector()
         print(
@@ -635,66 +880,66 @@ class OracleClient:
         )
         stage_outputs: dict[str, str] = {}
         try:
-            analysis_variant = self._choose_stage_variant(
-                "analysis",
-                prompt_config.analysis,
+            therapy_plan_variant = self._choose_stage_variant(
+                "therapy_plan",
+                prompt_config.therapy_plan,
                 prompt_selector,
             )
             self._emit_phase_status(
                 progress,
-                stage_name="analysis",
+                stage_name="therapy_plan",
                 phase_state="selected",
-                variant_name=analysis_variant.name,
-                phase_fill_color=analysis_variant.fill_color,
-                phase_outline_color=analysis_variant.outline_color,
-                message="Die Moiren greifen nach dem ersten Faden...",
+                variant_name=therapy_plan_variant.name,
+                phase_fill_color=therapy_plan_variant.fill_color,
+                phase_outline_color=therapy_plan_variant.outline_color,
+                message=self._stage_status_message("therapy_plan", "selected"),
                 star_count=0,
             )
-            stage_outputs["analysis"] = self._run_llm_stage(
-                stage_name="analysis",
-                variant_name=analysis_variant.name,
-                phase_fill_color=analysis_variant.fill_color,
-                phase_outline_color=analysis_variant.outline_color,
+            stage_outputs["therapy_plan"] = self._run_llm_stage(
+                stage_name="therapy_plan",
+                variant_name=therapy_plan_variant.name,
+                phase_fill_color=therapy_plan_variant.fill_color,
+                phase_outline_color=therapy_plan_variant.outline_color,
                 system_prompt=self._build_stage_prompt(
-                    stage_name="analysis",
-                    stage_variant=analysis_variant,
-                    stage_style=prompt_config.analysis.style,
+                    stage_name="therapy_plan",
+                    stage_variant=therapy_plan_variant,
+                    stage_style=prompt_config.therapy_plan.style,
                     persona=persona_profile,
                 ),
-                user_content=self._analysis_input(user_text, persona_profile),
+                user_content=self._therapy_plan_input(user_text, persona_profile),
                 progress=progress,
                 temperature=0.25,
             )
-            recommendation_variant = self._choose_stage_variant(
-                "recommendation",
-                prompt_config.recommendation,
+            scenario_variant = self._choose_stage_variant(
+                "scenario",
+                prompt_config.scenario,
                 prompt_selector,
             )
             self._emit_phase_status(
                 progress,
-                stage_name="recommendation",
+                stage_name="scenario",
                 phase_state="selected",
-                variant_name=recommendation_variant.name,
-                phase_fill_color=recommendation_variant.fill_color,
-                phase_outline_color=recommendation_variant.outline_color,
+                variant_name=scenario_variant.name,
+                phase_fill_color=scenario_variant.fill_color,
+                phase_outline_color=scenario_variant.outline_color,
                 message="Hermes trägt ein verborgenes Zeichen heran...",
                 star_count=0,
             )
-            stage_outputs["recommendation"] = self._run_llm_stage(
-                stage_name="recommendation",
-                variant_name=recommendation_variant.name,
-                phase_fill_color=recommendation_variant.fill_color,
-                phase_outline_color=recommendation_variant.outline_color,
+            stage_outputs["scenario"] = self._run_llm_stage(
+                stage_name="scenario",
+                variant_name=scenario_variant.name,
+                phase_fill_color=scenario_variant.fill_color,
+                phase_outline_color=scenario_variant.outline_color,
                 system_prompt=self._build_stage_prompt(
-                    stage_name="recommendation",
-                    stage_variant=recommendation_variant,
-                    stage_style=prompt_config.recommendation.style,
+                    stage_name="scenario",
+                    stage_variant=scenario_variant,
+                    stage_style=prompt_config.scenario.style,
                     persona=persona_profile,
                 ),
-                user_content=self._recommendation_input(
+                user_content=self._scenario_input(
                     user_text,
                     persona_profile,
-                    stage_outputs["analysis"],
+                    stage_outputs["therapy_plan"],
                 ),
                 progress=progress,
                 temperature=0.55,
@@ -734,8 +979,8 @@ class OracleClient:
                 system_prompt=prophecy_prompt,
                 user_content=self._prophecy_input(
                     persona_profile,
-                    stage_outputs["analysis"],
-                    stage_outputs["recommendation"],
+                    stage_outputs["therapy_plan"],
+                    stage_outputs["scenario"],
                 ),
                 progress=progress,
                 temperature=0.35,
@@ -776,6 +1021,7 @@ class OracleClient:
             return full_prophecy
         finally:
             stage_outputs.clear()
+            self._reset_status_message_cache()
             print("[Pipeline] Prophecy run context reset.", flush=True)
 
     def _choose_stage_variant(
@@ -835,69 +1081,72 @@ class OracleClient:
             flush=True,
         )
 
-        analysis_variant = prompt_selector.choose("analysis", prompt_config.analysis)
-        analysis_output = self._run_llm_stage(
-            stage_name="analysis",
-            variant_name=analysis_variant.name,
-            phase_fill_color=analysis_variant.fill_color,
-            phase_outline_color=analysis_variant.outline_color,
+        therapy_plan_variant = prompt_selector.choose(
+            "therapy_plan",
+            prompt_config.therapy_plan,
+        )
+        therapy_plan_output = self._run_llm_stage(
+            stage_name="therapy_plan",
+            variant_name=therapy_plan_variant.name,
+            phase_fill_color=therapy_plan_variant.fill_color,
+            phase_outline_color=therapy_plan_variant.outline_color,
             system_prompt=self._build_stage_prompt(
-                stage_name="analysis",
-                stage_variant=analysis_variant,
-                stage_style=prompt_config.analysis.style,
+                stage_name="therapy_plan",
+                stage_variant=therapy_plan_variant,
+                stage_style=prompt_config.therapy_plan.style,
                 persona=persona_profile,
             ),
-            user_content=self._analysis_input(normalized_user_text, persona_profile),
+            user_content=self._therapy_plan_input(normalized_user_text, persona_profile),
             progress=None,
             temperature=0.25,
             stream_output=stream_output,
         )
-        analysis_result = StageRunResult(
-            stage_name="analysis",
-            variant_name=analysis_variant.name,
-            variant_fill_color=analysis_variant.fill_color,
-            variant_outline_color=analysis_variant.outline_color,
-            variant_weight=analysis_variant.weight,
-            output=analysis_output,
+        therapy_plan_result = StageRunResult(
+            stage_name="therapy_plan",
+            variant_name=therapy_plan_variant.name,
+            variant_fill_color=therapy_plan_variant.fill_color,
+            variant_outline_color=therapy_plan_variant.outline_color,
+            variant_weight=therapy_plan_variant.weight,
+            output=therapy_plan_output,
         )
 
-        recommendation_variant = prompt_selector.choose(
-            "recommendation",
-            prompt_config.recommendation,
+        scenario_variant = prompt_selector.choose(
+            "scenario",
+            prompt_config.scenario,
         )
-        recommendation_output = self._run_llm_stage(
-            stage_name="recommendation",
-            variant_name=recommendation_variant.name,
-            phase_fill_color=recommendation_variant.fill_color,
-            phase_outline_color=recommendation_variant.outline_color,
+        scenario_output = self._run_llm_stage(
+            stage_name="scenario",
+            variant_name=scenario_variant.name,
+            phase_fill_color=scenario_variant.fill_color,
+            phase_outline_color=scenario_variant.outline_color,
             system_prompt=self._build_stage_prompt(
-                stage_name="recommendation",
-                stage_variant=recommendation_variant,
-                stage_style=prompt_config.recommendation.style,
+                stage_name="scenario",
+                stage_variant=scenario_variant,
+                stage_style=prompt_config.scenario.style,
                 persona=persona_profile,
             ),
-            user_content=self._recommendation_input(
+            user_content=self._scenario_input(
                 normalized_user_text,
                 persona_profile,
-                analysis_result.output,
+                therapy_plan_result.output,
             ),
             progress=None,
             temperature=0.55,
             stream_output=stream_output,
         )
-        recommendation_result = StageRunResult(
-            stage_name="recommendation",
-            variant_name=recommendation_variant.name,
-            variant_fill_color=recommendation_variant.fill_color,
-            variant_outline_color=recommendation_variant.outline_color,
-            variant_weight=recommendation_variant.weight,
-            output=recommendation_output,
+        scenario_result = StageRunResult(
+            stage_name="scenario",
+            variant_name=scenario_variant.name,
+            variant_fill_color=scenario_variant.fill_color,
+            variant_outline_color=scenario_variant.outline_color,
+            variant_weight=scenario_variant.weight,
+            output=scenario_output,
         )
 
         prophecy_input = self._prophecy_input(
             persona_profile,
-            analysis_result.output,
-            recommendation_result.output,
+            therapy_plan_result.output,
+            scenario_result.output,
         )
         prophecy_results: list[StageRunResult] = []
         total_prophecy_variants = len(prompt_config.prophecy.variants)
@@ -962,8 +1211,8 @@ class OracleClient:
         elapsed = monotonic() - started_at
         print(
             "[PromptTest] Prophecy matrix finished: "
-            f"analysis_variant={analysis_result.variant_name}, "
-            f"recommendation_variant={recommendation_result.variant_name}, "
+            f"therapy_plan_variant={therapy_plan_result.variant_name}, "
+            f"scenario_variant={scenario_result.variant_name}, "
             f"prophecy_variants={len(prophecy_results)}, "
             f"elapsed={elapsed:.1f}s",
             flush=True,
@@ -971,8 +1220,8 @@ class OracleClient:
         print("[PromptTest] Each prophecy stage used a fresh chat completion.", flush=True)
         return ProphecyMatrixResult(
             question=normalized_user_text,
-            analysis=analysis_result,
-            recommendation=recommendation_result,
+            therapy_plan=therapy_plan_result,
+            scenario=scenario_result,
             prophecies=tuple(prophecy_results),
         )
 
@@ -987,7 +1236,11 @@ class OracleClient:
         phase_outline_color: str,
         message: str,
         star_count: int,
+        response_text: str | None = None,
     ) -> None:
+        if phase_state == "selected":
+            message = self._stage_status_message(stage_name, phase_state)
+
         progress_value = PHASE_PROGRESS[(stage_name, phase_state)]
         print(
             "[Pipeline] STATUS_TRANSITION "
@@ -1013,6 +1266,7 @@ class OracleClient:
                 variant_name,
                 phase_fill_color,
                 phase_outline_color,
+                response_text,
             )
         except TypeError:
             progress(message, progress_value, star_count)
@@ -1040,6 +1294,7 @@ class OracleClient:
             f"reasoning_effort={self._stage_reasoning_effort(stage_name) or 'off'}",
             flush=True,
         )
+        self._answer_star_remainder_by_stage.pop(stage_name, None)
         reasoning_message = self._stage_status_message(stage_name, "reasoning")
         self._emit_phase_status(
             progress,
@@ -1147,6 +1402,7 @@ class OracleClient:
                         phase_outline_color=phase_outline_color,
                         message=self._stage_status_message(stage_name, "answer"),
                         star_count=word_star_count,
+                        response_text=f"{full_response}{content}",
                     )
                     full_response += content
                     chunk_count += 1
@@ -1179,6 +1435,7 @@ class OracleClient:
                 phase_outline_color=phase_outline_color,
                 message=self._stage_status_message(stage_name, "answer"),
                 star_count=1,
+                response_text=full_response,
             )
 
         if reasoning_started and not content_started and stream_output:
@@ -1200,7 +1457,9 @@ class OracleClient:
             phase_outline_color=phase_outline_color,
             message=self._stage_status_message(stage_name, "done"),
             star_count=0,
+            response_text=response_text,
         )
+        self._answer_star_remainder_by_stage.pop(stage_name, None)
         print(
             "[LLM] Stage finished: "
             f"stage={stage_name}, "
@@ -1250,8 +1509,12 @@ class OracleClient:
         phase_outline_color: str,
         message: str,
         star_count: int,
+        response_text: str | None = None,
     ) -> None:
-        if progress is None or star_count <= 0:
+        star_count = self._scaled_answer_star_count(stage_name, star_count)
+        if progress is None:
+            return
+        if star_count <= 0 and response_text is None:
             return
 
         progress_value = PHASE_PROGRESS[(stage_name, "answer")]
@@ -1265,9 +1528,22 @@ class OracleClient:
                 variant_name,
                 phase_fill_color,
                 phase_outline_color,
+                response_text,
             )
         except TypeError:
             progress(message, progress_value, star_count)
+
+    def _scaled_answer_star_count(self, stage_name: str, star_count: int) -> int:
+        if star_count <= 0:
+            return 0
+
+        if self._stage_reasoning_enabled(stage_name):
+            return star_count
+
+        carry = self._answer_star_remainder_by_stage.get(stage_name, 0.0) + star_count * 0.5
+        emitted_stars = int(carry)
+        self._answer_star_remainder_by_stage[stage_name] = carry - emitted_stars
+        return emitted_stars
 
     def _count_line_breaks(
         self,
@@ -1328,21 +1604,31 @@ class OracleClient:
         return completed_word_count, trailing_fragment
 
     def _stage_status_message(self, stage_name: str, phase_state: str) -> str:
-        messages = {
-            ("analysis", "reasoning"): "Ich lausche den Echos aus dem Tartaros...",
-            ("analysis", "answer"): "Athene ordnet die Splitter im Rauch...",
-            ("analysis", "done"): "Der erste Faden glänzt im Licht der Moiren.",
-            ("recommendation", "reasoning"): "Hekate hebt die Fackel an die Schwelle...",
-            ("recommendation", "answer"): "Hermes flüstert zwischen Schatten und Schwur...",
-            ("recommendation", "done"): "Der zweite Faden ruht unter dunklem Lorbeer.",
-            ("prophecy", "reasoning"): "Apollons Leier klingt hinter dem Nebel...",
-            ("prophecy", "answer"): "Die Moiren ziehen den Spruch aus der Nacht...",
-            ("prophecy", "done"): "Das Zeichen sinkt auf die Karte.",
-            ("spellcheck", "reasoning"): "Die Schrift wird gegen den Wind gelesen...",
-            ("spellcheck", "answer"): "Der letzte Fehler weicht aus dem Spruch...",
-            ("spellcheck", "done"): "Der Spruch liegt bereinigt vor.",
-        }
-        return messages.get((stage_name, phase_state), "Die Zeichen wandern weiter...")
+        cache_key = (stage_name, phase_state)
+        cached_message = self._status_message_cache.get(cache_key)
+        if cached_message is not None:
+            return cached_message
+
+        variants = self._stage_message_variants(stage_name, phase_state)
+        if not variants:
+            message = "Die Zeichen wandern weiter..."
+        else:
+            message = random.choice(variants)
+
+        self._status_message_cache[cache_key] = message
+        return message
+
+    def _stage_message_variants(
+        self,
+        stage_name: str,
+        phase_state: str,
+    ) -> tuple[str, ...]:
+        parts = _PHASE_MESSAGE_PARTS.get((stage_name, phase_state))
+        if parts is None:
+            return ()
+
+        openings, endings = parts
+        return tuple(f"{opening} {ending}" for opening in openings for ending in endings)
 
     def _build_stage_prompt(
         self,
@@ -1416,7 +1702,7 @@ class OracleClient:
 
         return "Suchender"
 
-    def _analysis_input(self, user_text: str, persona: PersonaProfile) -> str:
+    def _therapy_plan_input(self, user_text: str, persona: PersonaProfile) -> str:
         return (
             "Persona JSON:\n"
             f"{persona.as_json()}\n\n"
@@ -1426,11 +1712,11 @@ class OracleClient:
             "\"\"\""
         )
 
-    def _recommendation_input(
+    def _scenario_input(
         self,
         user_text: str,
         persona: PersonaProfile,
-        analysis: str,
+        therapy_plan: str,
     ) -> str:
         return (
             "Persona JSON:\n"
@@ -1439,25 +1725,28 @@ class OracleClient:
             "\"\"\"\n"
             f"{user_text.strip()}\n"
             "\"\"\"\n\n"
-            "Analysis from stage A:\n"
-            f"{analysis}"
+            "Therapy plan from stage A:\n"
+            f"{therapy_plan}"
         )
 
     def _prophecy_input(
         self,
         persona: PersonaProfile,
-        analysis: str,
-        recommendation: str,
+        therapy_plan: str,
+        scenario: str,
     ) -> str:
         return (
             "Persona JSON:\n"
             f"{persona.as_json()}\n\n"
-            "JSON-A:\n"
-            f"{analysis}\n\n"
-            "JSON-B:\n"
-            f"{recommendation}"
+            "JSON-A Therapy Plan:\n"
+            f"{therapy_plan}\n\n"
+            "JSON-B Scenario:\n"
+            f"{scenario}"
         )
 
     def _spellcheck_input(self, prophecy: str) -> str:
         return prophecy.strip()
+
+    def _reset_status_message_cache(self) -> None:
+        self._status_message_cache.clear()
 

@@ -25,12 +25,12 @@ class PromptStage:
 
 @dataclass(frozen=True)
 class PromptConfig:
-    analysis: PromptStage
-    recommendation: PromptStage
+    therapy_plan: PromptStage
+    scenario: PromptStage
     prophecy: PromptStage
 
 
-PROMPT_STAGE_NAMES = ( "analysis", "recommendation", "prophecy")
+PROMPT_STAGE_NAMES = ("therapy_plan", "scenario", "prophecy")
 
 
 def load_prompt_config(path: Path) -> PromptConfig:
@@ -56,11 +56,14 @@ def load_prompt_config(path: Path) -> PromptConfig:
         raise ValueError(f"Prompt config is missing root keys: {joined_keys}")
 
     return PromptConfig(
- 
-        analysis=_read_stage(raw_config["analysis"], "analysis", require_style=False),
-        recommendation=_read_stage(
-            raw_config["recommendation"],
-            "recommendation",
+        therapy_plan=_read_stage(
+            raw_config["therapy_plan"],
+            "therapy_plan",
+            require_style=False,
+        ),
+        scenario=_read_stage(
+            raw_config["scenario"],
+            "scenario",
             require_style=False,
         ),
         prophecy=_read_stage(raw_config["prophecy"], "prophecy", require_style=True),

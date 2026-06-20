@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 from io import BytesIO
+import json
 import math
 import random
 import struct
@@ -44,11 +45,16 @@ MIN_WINDOW_ALPHA = 0.04
 PROGRESS_SMOOTHING_PER_SECOND = 4.0
 PHASE_MARKER_POSITIONS = {
     "persona": (156, 96),
-    "analysis": (238, 84),
-    "recommendation": (320, 96),
+    "therapy_plan": (238, 84),
+    "scenario": (320, 96),
     "prophecy": (402, 84),
 }
-CHEAT_STAGE_NAMES = ("analysis", "recommendation", "prophecy")
+CHEAT_STAGE_NAMES = ("therapy_plan", "scenario", "prophecy")
+CHEAT_STAGE_LABELS = {
+    "therapy_plan": "Therapy Plan",
+    "scenario": "Scenario",
+    "prophecy": "Prophecy",
+}
 CHEAT_RANDOM_OPTION = "(random)"
 
 
@@ -101,7 +107,7 @@ class FortuneTellerGUI:
         self._star_fill_colors: list[str] = []
         self._star_outline_colors: list[str] = []
         self._next_star_slot = 0
-        self._phase_markers: dict[str, tuple[str, str, str, float]] = {}
+        self._phase_markers: dict[str, tuple[str, str, str, float, str | None]] = {}
         self._phase_marker_hitboxes: dict[str, tuple[float, float, float]] = {}
         self._hovered_phase_marker: str | None = None
         self._card_reveal_started_at: float | None = None
@@ -369,6 +375,7 @@ class FortuneTellerGUI:
         variant_name: str | None = None,
         phase_fill_color: str | None = None,
         phase_outline_color: str | None = None,
+        response_text: str | None = None,
     ) -> None:
         if self._is_shutting_down:
             return
@@ -391,7 +398,19 @@ class FortuneTellerGUI:
                     phase_fill_color,
                     phase_outline_color,
                     monotonic(),
+                    None,
                 )
+            elif phase_name and response_text is not None:
+                existing_marker = self._phase_markers.get(phase_name)
+                if existing_marker is not None:
+                    label, fill_color, outline_color, activated_at, _ = existing_marker
+                    self._phase_markers[phase_name] = (
+                        label,
+                        fill_color,
+                        outline_color,
+                        activated_at,
+                        response_text,
+                    )
             self.progress = max(self.progress, next_progress)
             self._activate_stars(
                 star_count,
@@ -428,7 +447,7 @@ class FortuneTellerGUI:
         for row_index, stage_name in enumerate(CHEAT_STAGE_NAMES, start=1):
             label = tk.Label(
                 self._cheat_panel,
-                text=stage_name.capitalize(),
+                text=CHEAT_STAGE_LABELS.get(stage_name, stage_name.replace("_", " ").title()),
                 bg="#161d26",
                 fg="#f4e5bd",
                 font=("Segoe UI", 10, "bold"),
@@ -655,11 +674,11 @@ class FortuneTellerGUI:
         if marker is None or hitbox is None:
             return
 
-        variant_name, fill_color, outline_color, _ = marker
+        variant_name, fill_color, outline_color, _, response_text = marker
         marker_x, marker_y, radius = hitbox
         tooltip_x = marker_x + self._content_offset_x
         tooltip_y = marker_y + self._content_offset_y - radius - 22
-        label = variant_name
+        label = self._phase_marker_tooltip_text(variant_name, response_text)
         padding_x = 10
         padding_y = 6
         font = ("Consolas", 10, "bold")
@@ -876,13 +895,13 @@ class FortuneTellerGUI:
         now = monotonic()
         self._phase_marker_hitboxes = {}
         for index, stage_name in enumerate(
-            ("persona", "analysis", "recommendation", "prophecy")
+            ("persona", "therapy_plan", "scenario", "prophecy")
         ):
             marker = self._phase_markers.get(stage_name)
             if marker is None:
                 continue
 
-            _, fill_color, outline_color, activated_at = marker
+            _, fill_color, outline_color, activated_at, _ = marker
             base_x, base_y = PHASE_MARKER_POSITIONS[stage_name]
             age = max(0.0, now - activated_at)
             drift_x = math.sin(self._angle * 0.86 + index * 1.8) * 5.8
@@ -924,7 +943,30 @@ class FortuneTellerGUI:
             fill_color,
             outline_color,
             monotonic(),
+            None,
         )
+
+    def _phase_marker_tooltip_text(
+        self,
+        variant_name: str,
+        response_text: str | None,
+    ) -> str:
+        if not response_text:
+            return variant_name
+
+        rendered_response = response_text.strip()
+        try:
+            parsed = json.loads(rendered_response)
+        except json.JSONDecodeError:
+            pass
+        else:
+            rendered_response = json.dumps(
+                parsed,
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        return f"{variant_name}\n\n{rendered_response}"
 
     def _draw_candle_scene(self) -> None:
         flame_on = self.mode == "recording"
