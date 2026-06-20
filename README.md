@@ -106,3 +106,5 @@ Die Hintergrundmusik startet mit dem Splashscreen und nutzt die lokale Datei
 
 Attribution: 'I Walk With Ghosts' by Scott Buckley - released under CC-BY 4.0.
 www.scottbuckley.com.au
+
+Tarot-Karten mit Dank von hier verwendet: https://luciellaes.itch.io/rider-waite-smith-tarot-cards-cc0

@@ -12,11 +12,16 @@ import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import ttk
 import traceback
+from typing import Any
 import zlib
 
 from audio_player import MusicPlayer
 from audio_recorder import AudioRecorder
 from fortune_service import FortuneTellerService, NoAudioError, NoSpeechError
+from tarot_cards import (
+    TAROT_CARD_BORDER_FILENAME,
+    tarot_card_asset_path,
+)
 
 
 CREDIT_TEXT = (
@@ -38,6 +43,12 @@ STAR_HOLD_SECONDS = 30.0
 STAR_FADE_OUT_SECONDS = 50.0
 CARD_LETTER_DELAY_MS = 50
 CARD_LETTER_SHARPEN_SECONDS = 0.55
+HOVER_TOOLTIP_MAX_WIDTH = 760
+TAROT_REVEAL_SECONDS = 0.9
+TAROT_REVEAL_STAGGER_SECONDS = 0.18
+TAROT_CARD_WIDTH = 300
+TAROT_CARD_HEIGHT = 527
+TAROT_CARD_GAP = 48
 CRYSTAL_CORE_CYCLE_SECONDS = 30.0
 FRAME_DELAY_MS = 33
 SHUTDOWN_SECONDS = 5.0
@@ -78,6 +89,7 @@ class FortuneTellerGUI:
         self.progress = 0.0
         self._display_progress = 0.0
         self.prophecy = ""
+        self._tarot_spread: dict[str, Any] | None = None
         self._angle = 0.0
         self._vapor_angle = 0.0
         self._star_angle = 0.0
@@ -91,7 +103,7 @@ class FortuneTellerGUI:
         self._is_recording = False
         self._extinguish_started_at: float | None = None
         self._fog_clear_started_at: float | None = None
-        self._pending_prophecy: str | None = None
+        self._pending_prophecy: str | dict[str, Any] | None = None
         self._pending_reset_message: str | None = None
         self._scene_fade_started_at: float | None = None
         self._scene_fade_phase: str | None = None
@@ -110,6 +122,9 @@ class FortuneTellerGUI:
         self._phase_markers: dict[str, tuple[str, str, str, float, str | None]] = {}
         self._phase_marker_hitboxes: dict[str, tuple[float, float, float]] = {}
         self._hovered_phase_marker: str | None = None
+        self._hover_legend_hitboxes: dict[str, tuple[float, float, float, float]] = {}
+        self._hover_legends: dict[str, tuple[str, str, str]] = {}
+        self._hovered_legend: str | None = None
         self._card_reveal_started_at: float | None = None
         self._card_layout_key: tuple[str, int, int, int, int] | None = None
         self._card_letters: list[tuple[str, float, float, tkfont.Font, int | None]] = []
@@ -119,6 +134,8 @@ class FortuneTellerGUI:
         self._gray_veil_image: tk.PhotoImage | None = None
         self._gray_veil_image_key: tuple[int, int, int] | None = None
         self._frame_images: list[tk.PhotoImage] = []
+        self._tarot_image_cache: dict[str, tk.PhotoImage] = {}
+        self._tarot_blur_image_cache: dict[tuple[str, int], tk.PhotoImage] = {}
         self._cheat_mode_enabled = False
         self._alt_pressed = False
         self._alt_code_digits = ""
@@ -192,6 +209,7 @@ class FortuneTellerGUI:
         self.status_text = "Die Kerze brennt. Sprich in die Flamme."
         self._reset_progress()
         self.prophecy = ""
+        self._tarot_spread = None
         self._pending_prophecy = None
         self._pending_reset_message = None
         self._fog_clear_started_at = None
@@ -235,6 +253,7 @@ class FortuneTellerGUI:
         self.status_text = "Halte die Flamme entzündet."
         self._reset_progress()
         self.prophecy = ""
+        self._tarot_spread = None
         self._pending_prophecy = None
         self._pending_reset_message = None
         self._fog_clear_started_at = None
@@ -544,14 +563,23 @@ class FortuneTellerGUI:
         local_x = event.x - self._content_offset_x
         local_y = event.y - self._content_offset_y
         self._hovered_phase_marker = self._hit_test_phase_marker(local_x, local_y)
+        self._hovered_legend = self._hit_test_hover_legend(event.x, event.y)
 
     def _handle_pointer_leave(self, event: tk.Event) -> None:
         self._hovered_phase_marker = None
+        self._hovered_legend = None
 
     def _hit_test_phase_marker(self, x: float, y: float) -> str | None:
         for stage_name, (marker_x, marker_y, radius) in self._phase_marker_hitboxes.items():
             if math.hypot(x - marker_x, y - marker_y) <= radius:
                 return stage_name
+
+        return None
+
+    def _hit_test_hover_legend(self, x: float, y: float) -> str | None:
+        for legend_key, (x1, y1, x2, y2) in self._hover_legend_hitboxes.items():
+            if x1 <= x <= x2 and y1 <= y <= y2:
+                return legend_key
 
         return None
 
@@ -572,6 +600,7 @@ class FortuneTellerGUI:
         self.status_text = message
         self._reset_progress()
         self.prophecy = ""
+        self._tarot_spread = None
         self._pending_prophecy = None
         self._pending_reset_message = None
         self._fog_clear_started_at = None
@@ -585,22 +614,33 @@ class FortuneTellerGUI:
         self._reset_phase_markers()
         self._refresh_cheat_panel()
 
-    def show_prophecy(self, prophecy: str) -> None:
+    def show_prophecy(self, prophecy: str | dict[str, Any]) -> None:
         if self._is_shutting_down:
             return
 
-        clean_prophecy = prophecy.strip()
+        clean_prophecy: str | dict[str, Any]
+        if isinstance(prophecy, str):
+            clean_prophecy = prophecy.strip()
+        else:
+            clean_prophecy = prophecy
+
         if self.mode in {"extinguishing", "revealing"}:
             self._pending_prophecy = clean_prophecy
             return
 
         self._show_prophecy_now(clean_prophecy)
 
-    def _show_prophecy_now(self, prophecy: str) -> None:
-        self.prophecy = prophecy
+    def _show_prophecy_now(self, prophecy: str | dict[str, Any]) -> None:
+        if isinstance(prophecy, dict) and prophecy.get("mode") == "tarot_card":
+            self.prophecy = ""
+            self._tarot_spread = prophecy
+            self.status_text = "Die Karten sind gefallen."
+        else:
+            self.prophecy = str(prophecy)
+            self._tarot_spread = None
+            self.status_text = "Die Karte ist gefallen."
         self.progress = 100
         self.mode = "card"
-        self.status_text = "Die Karte ist gefallen."
         self._pending_prophecy = None
         self._card_reveal_started_at = monotonic()
         self._card_layout_key = None
@@ -622,9 +662,12 @@ class FortuneTellerGUI:
         self.canvas.delete("backdrop")
         self.canvas.delete("vignette")
         self.canvas.delete("veil")
+        self.canvas.delete("overlay")
         self.canvas.delete("scene")
         self._frame_images = []
         self._gray_veil_strength = 0.0
+        self._hover_legend_hitboxes = {}
+        self._hover_legends = {}
         self._update_content_offset()
         self._draw_fullscreen_backdrop()
         self._draw_background()
@@ -641,7 +684,8 @@ class FortuneTellerGUI:
         elif self.mode == "processing":
             self._draw_processing_scene()
         elif self.mode == "card":
-            self._draw_tarot_card()
+            if self._tarot_spread is None:
+                self._draw_text_prophecy_card()
 
         scene_transition_strength = self._update_scene_transition()
         self._draw_gray_veil(scene_transition_strength)
@@ -651,6 +695,8 @@ class FortuneTellerGUI:
 
         self._position_scene()
         self._draw_fullscreen_vignette()
+        if self.mode == "card" and self._tarot_spread is not None:
+            self._draw_tarot_spread_overlay()
         self._draw_fullscreen_gray_veil()
         self._draw_phase_marker_tooltip()
         self.root.after(FRAME_DELAY_MS, self._animate)
@@ -666,6 +712,21 @@ class FortuneTellerGUI:
             self.canvas.move("scene", self._content_offset_x, self._content_offset_y)
 
     def _draw_phase_marker_tooltip(self) -> None:
+        if self._hovered_legend is not None:
+            legend = self._hover_legends.get(self._hovered_legend)
+            hitbox = self._hover_legend_hitboxes.get(self._hovered_legend)
+            if legend is not None and hitbox is not None:
+                label, fill_color, outline_color = legend
+                x1, y1, x2, _ = hitbox
+                self._draw_hover_tooltip(
+                    label=label,
+                    center_x=(x1 + x2) / 2,
+                    bottom_y=y1 - 10,
+                    fill_color=fill_color,
+                    outline_color=outline_color,
+                )
+            return
+
         if self._hovered_phase_marker is None:
             return
 
@@ -676,21 +737,37 @@ class FortuneTellerGUI:
 
         variant_name, fill_color, outline_color, _, response_text = marker
         marker_x, marker_y, radius = hitbox
-        tooltip_x = marker_x + self._content_offset_x
-        tooltip_y = marker_y + self._content_offset_y - radius - 22
         label = self._phase_marker_tooltip_text(variant_name, response_text)
+        self._draw_hover_tooltip(
+            label=label,
+            center_x=marker_x + self._content_offset_x,
+            bottom_y=marker_y + self._content_offset_y - radius - 22,
+            fill_color=fill_color,
+            outline_color=outline_color,
+        )
+
+    def _draw_hover_tooltip(
+        self,
+        *,
+        label: str,
+        center_x: float,
+        bottom_y: float,
+        fill_color: str,
+        outline_color: str,
+    ) -> None:
         padding_x = 10
         padding_y = 6
         font = ("Consolas", 10, "bold")
         tooltip_font = tkfont.Font(font=font)
-        lines = label.splitlines() or [label]
+        wrapped_label = self._wrap_label_text(label, tooltip_font, HOVER_TOOLTIP_MAX_WIDTH)
+        lines = wrapped_label.splitlines() or [wrapped_label]
         width = max(tooltip_font.measure(line) for line in lines)
         line_height = tooltip_font.metrics("linespace")
         text_height = line_height * len(lines)
-        x1 = tooltip_x - width / 2 - padding_x
-        y1 = tooltip_y - text_height - padding_y
-        x2 = tooltip_x + width / 2 + padding_x
-        y2 = tooltip_y + padding_y
+        x1 = center_x - width / 2 - padding_x
+        y1 = bottom_y - text_height - padding_y
+        x2 = center_x + width / 2 + padding_x
+        y2 = bottom_y + padding_y
         self.canvas.create_rectangle(
             x1,
             y1,
@@ -702,9 +779,9 @@ class FortuneTellerGUI:
             tags="vignette",
         )
         self.canvas.create_text(
-            tooltip_x,
-            tooltip_y - text_height / 2,
-            text=label,
+            center_x,
+            bottom_y - text_height / 2,
+            text=wrapped_label,
             fill="#10151d",
             font=font,
             tags="vignette",
@@ -1249,6 +1326,9 @@ class FortuneTellerGUI:
         self._phase_markers = {}
         self._phase_marker_hitboxes = {}
         self._hovered_phase_marker = None
+        self._hover_legend_hitboxes = {}
+        self._hover_legends = {}
+        self._hovered_legend = None
 
     def _reset_card_reveal(self) -> None:
         self._card_reveal_started_at = None
@@ -1471,7 +1551,7 @@ class FortuneTellerGUI:
         )
         return f"#{mixed[0]:02x}{mixed[1]:02x}{mixed[2]:02x}"
 
-    def _draw_tarot_card(self) -> None:
+    def _draw_text_prophecy_card(self) -> None:
         x1, y1, x2, y2 = 155, 125, 485, 650
         self.canvas.create_oval(132, 620, 508, 680, fill="#080a0f", outline="", tags="scene")
         self.canvas.create_rectangle(x1, y1, x2, y2, fill="#efe3c0", outline="#c9a45f", width=5, tags="scene")
@@ -1506,6 +1586,208 @@ class FortuneTellerGUI:
         )
 
         self._draw_card_text(self.prophecy, x1 + 42, y1 + 98, x2 - 42, y2 - 58)
+
+    def _draw_tarot_spread_overlay(self) -> None:
+        spread = self._tarot_spread
+        if spread is None:
+            return
+
+        if self._card_reveal_started_at is None:
+            self._card_reveal_started_at = monotonic()
+
+        canvas_width = max(CONTENT_WIDTH, self.canvas.winfo_width())
+        canvas_height = max(CONTENT_HEIGHT, self.canvas.winfo_height())
+        total_width = TAROT_CARD_WIDTH * 3 + TAROT_CARD_GAP * 2
+        start_x = (canvas_width - total_width) / 2 + TAROT_CARD_WIDTH / 2
+        top_y = max(34.0, min(canvas_height - TAROT_CARD_HEIGHT - 34.0, 92.0))
+        center_y = top_y + TAROT_CARD_HEIGHT / 2
+
+        self.canvas.create_oval(
+            start_x - 210,
+            top_y + TAROT_CARD_HEIGHT - 12,
+            start_x + total_width - TAROT_CARD_WIDTH + 210,
+            top_y + TAROT_CARD_HEIGHT + 60,
+            fill="#07090d",
+            outline="",
+            stipple="gray50",
+            tags="overlay",
+        )
+
+        positions = (
+            ("past", "VERGANGENHEIT"),
+            ("present", "GEGENWART"),
+            ("future", "ZUKUNFT"),
+        )
+        for index, (key, label) in enumerate(positions):
+            slot = spread.get(key)
+            if not isinstance(slot, dict):
+                continue
+
+            center_x = start_x + index * (TAROT_CARD_WIDTH + TAROT_CARD_GAP)
+            reveal_progress = self._tarot_card_reveal_progress(index)
+            label_y = top_y - 18
+            self.canvas.create_text(
+                center_x,
+                label_y,
+                text=label,
+                fill="#e8dac0",
+                font=("Georgia", 13, "bold"),
+                tags="overlay",
+            )
+            self._register_hover_legend(
+                legend_key=f"tarot-{key}",
+                center_x=center_x,
+                center_y=label_y,
+                width=TAROT_CARD_WIDTH,
+                height=28,
+                label=self._tarot_legend_text(label, slot),
+                fill_color="#efe3c0",
+                outline_color="#c9a45f",
+            )
+            self._draw_tarot_card_image(
+                center_x=center_x,
+                center_y=center_y,
+                filename=str(slot.get("filename", "")),
+                reveal_progress=reveal_progress,
+            )
+
+        future_center_x = start_x + 2 * (TAROT_CARD_WIDTH + TAROT_CARD_GAP)
+        self._draw_tarot_close_button(
+            card_left=future_center_x - TAROT_CARD_WIDTH / 2,
+            card_top=top_y,
+        )
+
+    def _tarot_legend_text(self, label: str, slot: dict[str, Any]) -> str:
+        title = str(slot.get("title", "")).strip()
+        meaning = str(slot.get("meaning", "")).strip()
+        parts = [label]
+        if title:
+            parts.append(title)
+        if meaning:
+            parts.append("")
+            parts.append(meaning)
+        return "\n".join(parts)
+
+    def _register_hover_legend(
+        self,
+        *,
+        legend_key: str,
+        center_x: float,
+        center_y: float,
+        width: float,
+        height: float,
+        label: str,
+        fill_color: str,
+        outline_color: str,
+    ) -> None:
+        x1 = center_x - width / 2
+        y1 = center_y - height / 2
+        x2 = center_x + width / 2
+        y2 = center_y + height / 2
+        self._hover_legend_hitboxes[legend_key] = (x1, y1, x2, y2)
+        self._hover_legends[legend_key] = (label, fill_color, outline_color)
+
+    def _draw_tarot_card_image(
+        self,
+        *,
+        center_x: float,
+        center_y: float,
+        filename: str,
+        reveal_progress: float,
+    ) -> None:
+        if not filename:
+            return
+
+        image = self._get_tarot_display_image(filename, reveal_progress)
+        self._frame_images.append(image)
+        self.canvas.create_image(
+            center_x,
+            center_y,
+            image=image,
+            tags="overlay",
+        )
+
+        border = self._get_tarot_static_image(TAROT_CARD_BORDER_FILENAME)
+        self._frame_images.append(border)
+        self.canvas.create_image(
+            center_x,
+            center_y,
+            image=border,
+            tags="overlay",
+        )
+
+    def _draw_tarot_close_button(self, *, card_left: float, card_top: float) -> None:
+        x = card_left + TAROT_CARD_WIDTH - 28
+        y = card_top + 28
+        self.canvas.create_oval(
+            x - 14,
+            y - 14,
+            x + 14,
+            y + 14,
+            fill="#5c3432",
+            outline="#d5b672",
+            width=1,
+            tags=("overlay", "card_close"),
+        )
+        self.canvas.create_text(
+            x,
+            y,
+            text="X",
+            fill="#f8edcf",
+            font=("Segoe UI", 11, "bold"),
+            tags=("overlay", "card_close"),
+        )
+
+    def _tarot_card_reveal_progress(self, index: int) -> float:
+        if self._card_reveal_started_at is None:
+            return 0.0
+
+        elapsed = monotonic() - self._card_reveal_started_at - index * TAROT_REVEAL_STAGGER_SECONDS
+        return max(0.0, min(1.0, elapsed / TAROT_REVEAL_SECONDS))
+
+    def _get_tarot_display_image(
+        self,
+        filename: str,
+        reveal_progress: float,
+    ) -> tk.PhotoImage:
+        blur_factor = self._tarot_blur_factor(reveal_progress)
+        if blur_factor <= 1:
+            return self._get_tarot_static_image(filename)
+
+        cache_key = (filename, blur_factor)
+        cached = self._tarot_blur_image_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        source = self._get_tarot_static_image(filename)
+        blurred = source.subsample(blur_factor, blur_factor).zoom(blur_factor, blur_factor)
+        self._tarot_blur_image_cache[cache_key] = blurred
+        return blurred
+
+    def _tarot_blur_factor(self, reveal_progress: float) -> int:
+        remaining = 1.0 - self._ease_in_out(reveal_progress)
+        if remaining > 0.82:
+            return 10
+        if remaining > 0.66:
+            return 6
+        if remaining > 0.48:
+            return 4
+        if remaining > 0.3:
+            return 3
+        if remaining > 0.12:
+            return 2
+
+        return 1
+
+    def _get_tarot_static_image(self, filename: str) -> tk.PhotoImage:
+        cached = self._tarot_image_cache.get(filename)
+        if cached is not None:
+            return cached
+
+        image_path = tarot_card_asset_path(filename)
+        image = tk.PhotoImage(file=str(image_path))
+        self._tarot_image_cache[filename] = image
+        return image
 
     def _draw_card_text(self, text: str, x1: int, y1: int, x2: int, y2: int) -> None:
         self._prepare_card_text_layout(text, x1, y1, x2, y2)
@@ -1649,3 +1931,32 @@ class FortuneTellerGUI:
                 wrapped.append(None)
 
         return wrapped
+
+    def _wrap_label_text(
+        self,
+        text: str,
+        font: tkfont.Font,
+        max_width: int,
+    ) -> str:
+        wrapped_lines: list[str] = []
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                wrapped_lines.append("")
+                continue
+
+            current = ""
+            for word in line.split():
+                candidate = word if not current else f"{current} {word}"
+                if font.measure(candidate) <= max_width:
+                    current = candidate
+                    continue
+
+                if current:
+                    wrapped_lines.append(current)
+                current = word
+
+            if current:
+                wrapped_lines.append(current)
+
+        return "\n".join(wrapped_lines)

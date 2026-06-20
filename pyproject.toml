@@ -34,6 +34,7 @@ py-modules = [
     "prompt_test",
     "settings",
     "splash",
+    "tarot_cards",
     "test",
     "transcriber",
 ]

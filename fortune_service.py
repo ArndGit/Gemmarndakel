@@ -76,7 +76,7 @@ class FortuneTellerService:
         audio: np.ndarray,
         persona: PersonaProfile | None = None,
         progress: ProgressCallback | None = None,
-    ) -> str:
+    ) -> str | dict[str, object]:
         if audio.size == 0:
             raise NoAudioError("Keine Daten erhalten.")
 

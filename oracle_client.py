@@ -15,6 +15,7 @@ from openai import OpenAI
 from persona import PersonaProfile
 from prompt_loader import PromptStage, PromptVariant, load_prompt_config
 from settings import AppSettings
+from tarot_cards import build_tarot_card_catalog_prompt, tarot_card_lookup
 
 
 ProgressCallback = Callable[..., None]
@@ -357,6 +358,8 @@ NORMALIZED_MODEL_LOADED_FLAG_KEYS = {
 NORMALIZED_MODEL_STATE_KEYS = {
     re.sub(r"[^a-z0-9]", "", key) for key in MODEL_STATE_KEYS
 }
+TAROT_PROPHECY_VARIANT_NAME = "c-tarot-card"
+TAROT_SPREAD_POSITIONS = ("past", "present", "future")
 
 
 @dataclass(frozen=True)
@@ -864,7 +867,7 @@ class OracleClient:
         user_text: str,
         persona: PersonaProfile | None = None,
         progress: ProgressCallback | None = None,
-    ) -> str:
+    ) -> str | dict[str, Any]:
         persona_profile = persona or PersonaProfile.unknown()
         started_at = monotonic()
         self._reset_status_message_cache()
@@ -970,8 +973,7 @@ class OracleClient:
                 f"style_chars={len(prompt_config.prophecy.style or '')}",
                 flush=True,
             )
-            stage_outputs["prophecy"] = self._normalize_prophecy_address(
-                self._run_llm_stage(
+            raw_prophecy_output = self._run_llm_stage(
                 stage_name="prophecy",
                 variant_name=prophecy_variant.name,
                 phase_fill_color=prophecy_variant.fill_color,
@@ -984,37 +986,50 @@ class OracleClient:
                 ),
                 progress=progress,
                 temperature=0.35,
-                ),
-                persona_profile,
             )
-            self._emit_phase_status(
-                progress,
-                stage_name="spellcheck",
-                phase_state="selected",
-                variant_name="spellcheck-de",
-                phase_fill_color=prophecy_variant.fill_color,
-                phase_outline_color=prophecy_variant.outline_color,
-                message="Der Spruch wird im letzten Licht geglaettet...",
-                star_count=0,
+            finalized_prophecy = self._finalize_prophecy_output(
+                prophecy_variant=prophecy_variant,
+                raw_output=raw_prophecy_output,
+                persona=persona_profile,
             )
-            stage_outputs["spellcheck"] = self._run_llm_stage(
-                stage_name="spellcheck",
-                variant_name="spellcheck-de",
-                phase_fill_color=prophecy_variant.fill_color,
-                phase_outline_color=prophecy_variant.outline_color,
-                system_prompt=SPELLCHECK_SYSTEM_PROMPT,
-                user_content=self._spellcheck_input(stage_outputs["prophecy"]),
-                progress=progress,
-                temperature=0.0,
-            ).strip()
-            if progress is not None:
-                progress("The card is being written.", 98, 0)
+            if isinstance(finalized_prophecy, dict):
+                stage_outputs["prophecy"] = json.dumps(
+                    finalized_prophecy,
+                    ensure_ascii=False,
+                )
+                if progress is not None:
+                    progress("Die Karten fallen ins Licht.", 98, 0)
+            else:
+                stage_outputs["prophecy"] = finalized_prophecy
+                self._emit_phase_status(
+                    progress,
+                    stage_name="spellcheck",
+                    phase_state="selected",
+                    variant_name="spellcheck-de",
+                    phase_fill_color=prophecy_variant.fill_color,
+                    phase_outline_color=prophecy_variant.outline_color,
+                    message="Der Spruch wird im letzten Licht geglaettet...",
+                    star_count=0,
+                )
+                stage_outputs["spellcheck"] = self._run_llm_stage(
+                    stage_name="spellcheck",
+                    variant_name="spellcheck-de",
+                    phase_fill_color=prophecy_variant.fill_color,
+                    phase_outline_color=prophecy_variant.outline_color,
+                    system_prompt=SPELLCHECK_SYSTEM_PROMPT,
+                    user_content=self._spellcheck_input(stage_outputs["prophecy"]),
+                    progress=progress,
+                    temperature=0.0,
+                ).strip()
+                if progress is not None:
+                    progress("Die Karte wird beschrieben.", 98, 0)
 
-            full_prophecy = stage_outputs["spellcheck"]
+            full_prophecy = finalized_prophecy
             elapsed = monotonic() - started_at
             print(
                 "[LLM] Agentic prophecy pipeline finished: "
-                f"answer_chars={len(full_prophecy)}, "
+                f"mode={'tarot' if isinstance(full_prophecy, dict) else 'text'}, "
+                f"answer_chars={len(stage_outputs.get('spellcheck', stage_outputs['prophecy']))}, "
                 f"elapsed={elapsed:.1f}s",
                 flush=True,
             )
@@ -1181,30 +1196,36 @@ class OracleClient:
                 temperature=0.35,
                 stream_output=stream_output,
             )
-            spellchecked_output = self._run_llm_stage(
-                stage_name="spellcheck",
-                variant_name="spellcheck-de",
-                phase_fill_color=prophecy_variant.fill_color,
-                phase_outline_color=prophecy_variant.outline_color,
-                system_prompt=SPELLCHECK_SYSTEM_PROMPT,
-                user_content=self._spellcheck_input(
-                    self._normalize_prophecy_address(
-                        prophecy_output,
-                        persona_profile,
-                    )
-                ),
-                progress=None,
-                temperature=0.0,
-                stream_output=stream_output,
+            finalized_output = self._finalize_prophecy_output(
+                prophecy_variant=prophecy_variant,
+                raw_output=prophecy_output,
+                persona=persona_profile,
             )
+            if isinstance(finalized_output, dict):
+                output_text = json.dumps(finalized_output, ensure_ascii=False)
+                result_stage_name = "prophecy"
+            else:
+                spellchecked_output = self._run_llm_stage(
+                    stage_name="spellcheck",
+                    variant_name="spellcheck-de",
+                    phase_fill_color=prophecy_variant.fill_color,
+                    phase_outline_color=prophecy_variant.outline_color,
+                    system_prompt=SPELLCHECK_SYSTEM_PROMPT,
+                    user_content=self._spellcheck_input(finalized_output),
+                    progress=None,
+                    temperature=0.0,
+                    stream_output=stream_output,
+                )
+                output_text = spellchecked_output.strip()
+                result_stage_name = "spellcheck"
             prophecy_results.append(
                 StageRunResult(
-                    stage_name="spellcheck",
+                    stage_name=result_stage_name,
                     variant_name=prophecy_variant.name,
                     variant_fill_color=prophecy_variant.fill_color,
                     variant_outline_color=prophecy_variant.outline_color,
                     variant_weight=prophecy_variant.weight,
-                    output=spellchecked_output.strip(),
+                    output=output_text,
                 )
             )
 
@@ -1640,12 +1661,18 @@ class OracleClient:
     ) -> str:
         variant_prompt = stage_variant.prompt
         if stage_name == "prophecy":
-            variant_prompt = self._personalize_prophecy_prompt(variant_prompt, persona)
+            if stage_variant.name == TAROT_PROPHECY_VARIANT_NAME:
+                variant_prompt = self._build_tarot_prophecy_prompt(variant_prompt)
+            else:
+                variant_prompt = self._personalize_prophecy_prompt(variant_prompt, persona)
 
         if stage_style is None or stage_variant.ignore_style:
             return variant_prompt
 
         return f"{variant_prompt}\n\n{stage_style}"
+
+    def _build_tarot_prophecy_prompt(self, prompt: str) -> str:
+        return f"{prompt}\n\n{build_tarot_card_catalog_prompt()}"
 
     def _personalize_prophecy_prompt(
         self,
@@ -1749,4 +1776,108 @@ class OracleClient:
 
     def _reset_status_message_cache(self) -> None:
         self._status_message_cache.clear()
+
+    def _finalize_prophecy_output(
+        self,
+        *,
+        prophecy_variant: PromptVariant,
+        raw_output: str,
+        persona: PersonaProfile,
+    ) -> str | dict[str, Any]:
+        if prophecy_variant.name == TAROT_PROPHECY_VARIANT_NAME:
+            return self._parse_tarot_prophecy(raw_output)
+
+        return self._normalize_prophecy_address(raw_output, persona)
+
+    def _parse_tarot_prophecy(self, response_text: str) -> dict[str, Any]:
+        parsed = self._extract_json_object(response_text)
+        if not isinstance(parsed, dict):
+            raise ValueError("Tarot prophecy must be a JSON object.")
+
+        cards = tarot_card_lookup()
+        spread: dict[str, Any] = {"mode": "tarot_card"}
+        used_filenames: set[str] = set()
+        for position in TAROT_SPREAD_POSITIONS:
+            slot = parsed.get(position)
+            if not isinstance(slot, dict):
+                raise ValueError(f"Tarot prophecy is missing '{position}'.")
+
+            filename = self._resolve_tarot_filename(slot, cards)
+            if filename in used_filenames:
+                raise ValueError("Tarot prophecy selected the same card more than once.")
+            used_filenames.add(filename)
+
+            asset = cards[filename]
+            meaning = slot.get("meaning", "")
+            if not isinstance(meaning, str):
+                meaning = ""
+
+            spread[position] = {
+                "filename": asset.filename,
+                "title": asset.title,
+                "motif": asset.motif,
+                "meaning": meaning.strip(),
+            }
+
+        return spread
+
+    def _resolve_tarot_filename(
+        self,
+        slot: dict[str, Any],
+        cards: dict[str, Any],
+    ) -> str:
+        filename = slot.get("filename")
+        if isinstance(filename, str):
+            normalized_filename = filename.strip()
+            if normalized_filename in cards:
+                return normalized_filename
+
+        title = slot.get("title")
+        if isinstance(title, str):
+            normalized_title = title.strip().casefold()
+            for asset in cards.values():
+                if asset.title.casefold() == normalized_title:
+                    return asset.filename
+
+        raise ValueError("Tarot prophecy referenced an unknown tarot card.")
+
+    def _extract_json_object(self, response_text: str) -> Any:
+        stripped = response_text.strip()
+        if stripped.startswith("```"):
+            stripped = re.sub(r"^```(?:json)?\s*", "", stripped)
+            stripped = re.sub(r"\s*```$", "", stripped)
+
+        try:
+            return json.loads(stripped)
+        except json.JSONDecodeError:
+            pass
+
+        start = stripped.find("{")
+        if start < 0:
+            raise ValueError("Response did not contain JSON.")
+
+        depth = 0
+        in_string = False
+        escape = False
+        for index in range(start, len(stripped)):
+            character = stripped[index]
+            if in_string:
+                if escape:
+                    escape = False
+                elif character == "\\":
+                    escape = True
+                elif character == '"':
+                    in_string = False
+                continue
+
+            if character == '"':
+                in_string = True
+            elif character == "{":
+                depth += 1
+            elif character == "}":
+                depth -= 1
+                if depth == 0:
+                    return json.loads(stripped[start : index + 1])
+
+        raise ValueError("Response contained malformed JSON.")
 

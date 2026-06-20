@@ -216,6 +216,14 @@
         "prompt": "'Suchender, ich sage dir' Continue this exact opening into one German prophecy paragraph. Use a folk-omen tone: black bird, cracked cup, threshold, stranger at the road, candle, bread, key, old neighbor, weather sign. Use only the JSON from stage A and B as source material. Output only the finished paragraph."
       },
       {
+        "name": "c-tarot-card",
+        "fill_color": "#f0d28c",
+        "outline_color": "#44311c",
+        "weight": 10,
+        "ignore_style": true,
+        "prompt": "You are a tarot spread selector for stage C. Use Persona JSON together with JSON-A and JSON-B, but do not write prose, advice, spell-check notes, markdown, or any explanatory text. Choose exactly three distinct tarot cards for a past-present-future spread from the allowed catalog that will be appended below. The filenames must come from that catalog exactly as written, and the titles must match the chosen filenames. Output only valid JSON in exactly this shape: {\"mode\":\"tarot_card\",\"past\":{\"filename\":\"...\",\"title\":\"...\",\"meaning\":\"...\"},\"present\":{\"filename\":\"...\",\"title\":\"...\",\"meaning\":\"...\"},\"future\":{\"filename\":\"...\",\"title\":\"...\",\"meaning\":\"...\"}}. Keep each meaning short, in German, and grounded in the selected card's motive plus the stage A/B material."
+      },
+      {
         "name": "c-fortune-cookie",
         "fill_color": "#ffd166",
         "outline_color": "#8c6a12",
