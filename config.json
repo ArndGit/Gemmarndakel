@@ -243,7 +243,7 @@
         "outline_color": "#a88e4a",
         "weight": 1,
         "ignore_style": true,
-        "prompt": "You are a Bible verse selector. Given JSON-A and JSON-B, quickly recall one genuine German Bible verse that roughly matches any one visible theme from the JSON. Use the first verse that comes to mind. A partial mood match is enough. Do not search for a better verse. Do not compare verses. Do not check all JSON fields. Output only the verse text, then an em dash, then the reference."
+        "prompt": "You are a Bible verse selector. Given JSON-A and JSON-B, choose one German Bible verse reference that roughly matches any one visible theme from the JSON. Use the first fitting reference and stop. A partial mood match is enough. Do not compare verses. Do not inspect all JSON fields. Do not output verse text. Output only one exact verse key."
       },
       {
         "name": "c-yes-no-prophecy",

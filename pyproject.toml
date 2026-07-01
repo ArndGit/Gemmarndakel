@@ -25,6 +25,7 @@ py-modules = [
     "app_initializer",
     "audio_player",
     "audio_recorder",
+    "bible_verses",
     "fortune_service",
     "gui",
     "main",

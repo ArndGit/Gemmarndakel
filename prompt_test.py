@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 from pathlib import Path
+from time import sleep
 from typing import Sequence
 
 from legend_generator import write_legend_html
 from oracle_client import ProphecyMatrixResult, OracleClient
+from settings import AppSettings
+from persona import PersonaCameraAnalyzer, PersonaProfile
 from settings import load_settings
 
 
@@ -48,6 +52,47 @@ def _csv_text(value: str) -> str:
     return value.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\\n")
 
 
+def _compact_tarot_output(value: str) -> str:
+    try:
+        payload = json.loads(value)
+    except json.JSONDecodeError:
+        return value
+
+    if not isinstance(payload, dict) or payload.get("mode") != "tarot_card":
+        return value
+
+    selected_cards: list[str] = []
+    for position in ("past", "present", "future"):
+        slot = payload.get(position)
+        if not isinstance(slot, dict):
+            continue
+        title = slot.get("title")
+        filename = slot.get("filename")
+        if isinstance(title, str) and title.strip():
+            selected_cards.append(title.strip())
+        elif isinstance(filename, str) and filename.strip():
+            selected_cards.append(filename.strip())
+
+    return " | ".join(selected_cards) if selected_cards else value
+
+
+def _capture_test_persona(settings: AppSettings) -> PersonaProfile:
+    analyzer = PersonaCameraAnalyzer(settings)
+    session = analyzer.start_capture_session()
+    if session is None:
+        return PersonaProfile.unknown()
+
+    print(
+        "[PromptTest] Sampling persona from camera once before matrix run: "
+        f"timeout={settings.persona_capture_timeout_seconds}s",
+        flush=True,
+    )
+    sleep(settings.persona_capture_timeout_seconds)
+    persona = session.finish()
+    print(f"[PromptTest] Persona for test run: {persona.as_json()}", flush=True)
+    return persona
+
+
 def _write_csv(path: Path, result: ProphecyMatrixResult) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -87,7 +132,7 @@ def _write_csv(path: Path, result: ProphecyMatrixResult) -> None:
                     "prophecy_fill_color": prophecy.variant_fill_color,
                     "prophecy_outline_color": prophecy.variant_outline_color,
                     "prophecy_weight": prophecy.variant_weight,
-                    "answer_text": _csv_text(prophecy.output),
+                    "answer_text": _csv_text(_compact_tarot_output(prophecy.output)),
                 }
             )
 
@@ -105,8 +150,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     oracle = OracleClient(settings)
     oracle.check_connection()
+    persona = _capture_test_persona(settings)
     result = oracle.create_prophecy_matrix(
         question,
+        persona=persona,
         seed=args.seed,
         stream_output=args.verbose,
     )

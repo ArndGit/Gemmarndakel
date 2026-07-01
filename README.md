@@ -88,8 +88,10 @@ Der direkte Prompt-Test umgeht Tkinter, Splash, Audio und Whisper. Er:
 
 - liest die Frage aus `PROMPT_TEST_QUESTION` oder `--question`
 - zieht genau eine `therapy_plan`-Variante und eine `scenario`-Variante nach Gewicht
+- versucht einmal vorab eine Persona ueber die Kamera zu erfassen und nutzt sie fuer den ganzen Lauf
 - verwendet diese Zwischenresultate fuer alle `prophecy`-Varianten
 - schreibt eine CSV mit einer Zeile pro Prophezeiungsvariante
+- reduziert Tarot-Ausgaben in der CSV auf die drei ausgewaehlten Karten
 
 Beispiele:
 
@@ -108,3 +110,28 @@ Attribution: 'I Walk With Ghosts' by Scott Buckley - released under CC-BY 4.0.
 www.scottbuckley.com.au
 
 Tarot-Karten mit Dank von hier verwendet: https://luciellaes.itch.io/rider-waite-smith-tarot-cards-cc0
+
+### Datenquellen und Attribution
+
+Die lokale Bibelvers-Datei `data/bible_lut1912.json` wurde mit
+`download_bible_lut1912.py` aus oeffentlich erreichbaren Kapitel-Seiten von
+Bolls Bible aufgebaut:
+
+- https://bolls.life/LUT/1/1/
+- URL-Schema fuer den Import: `https://bolls.life/LUT/<book>/<chapter>/`
+
+Der enthaltene deutsche Bibeltext ist die Lutherbibel 1912. Diese
+Textfassung ist gemeinfrei / Public Domain.
+
+Bolls Bible wird hier als Abruf- und Zusammenstellungsquelle fuer die
+maschinell eingelesenen Kapitel ausdruecklich genannt.
+
+Die Bolls-App wird im Snap Store mit `GPL-3.0` ausgewiesen; dort ist auch das
+Source-Repository verlinkt:
+
+- https://snapcraft.io/bolls
+- https://github.com/Bolls-Bible/bain
+
+Diese GPL-Angabe bezieht sich auf die Bolls-Software. Die in
+`data/bible_lut1912.json` enthaltenen Bibelverse stammen weiterhin aus der
+gemeinfreien Lutherbibel 1912.

@@ -12,6 +12,11 @@ from urllib.request import Request, urlopen
 
 from openai import OpenAI
 
+from bible_verses import (
+    BIBLE_VERSE_PROPHECY_VARIANT_NAME,
+    build_bible_verse_prompt,
+    resolve_bible_verse_reference,
+)
 from persona import PersonaProfile
 from prompt_loader import PromptStage, PromptVariant, load_prompt_config
 from settings import AppSettings
@@ -1663,6 +1668,8 @@ class OracleClient:
         if stage_name == "prophecy":
             if stage_variant.name == TAROT_PROPHECY_VARIANT_NAME:
                 variant_prompt = self._build_tarot_prophecy_prompt(variant_prompt)
+            elif stage_variant.name == BIBLE_VERSE_PROPHECY_VARIANT_NAME:
+                variant_prompt = self._build_bible_verse_prophecy_prompt(variant_prompt)
             else:
                 variant_prompt = self._personalize_prophecy_prompt(variant_prompt, persona)
 
@@ -1673,6 +1680,9 @@ class OracleClient:
 
     def _build_tarot_prophecy_prompt(self, prompt: str) -> str:
         return f"{prompt}\n\n{build_tarot_card_catalog_prompt()}"
+
+    def _build_bible_verse_prophecy_prompt(self, prompt: str) -> str:
+        return build_bible_verse_prompt(prompt)
 
     def _personalize_prophecy_prompt(
         self,
@@ -1786,6 +1796,8 @@ class OracleClient:
     ) -> str | dict[str, Any]:
         if prophecy_variant.name == TAROT_PROPHECY_VARIANT_NAME:
             return self._parse_tarot_prophecy(raw_output)
+        if prophecy_variant.name == BIBLE_VERSE_PROPHECY_VARIANT_NAME:
+            return resolve_bible_verse_reference(raw_output)
 
         return self._normalize_prophecy_address(raw_output, persona)
 
